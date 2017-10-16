@@ -1,0 +1,41 @@
+<?php
+// Define the full path to your folder from root
+$path = "/srv/www/www.bitbull.ch/html/dl/scripts";
+// Open the folder
+$dir_handle = @opendir($path) or die("Unable to open $path");
+echo '<html><head><title>bitbull script archive</title></head><body><div style="text-align: left;"><a href=http://www.bitbull.ch>back</a>';
+// Loop through the files
+while ($file = $files =readdir($dir_handle)) 
+   {
+   if (strpos($file, '.sh',1)|| strpos($file, '.pl',1) || strpos($file, '.rb',1) || strpos($file, '.py',1) || strpos($file, '.conf',1))
+	{
+        echo "<table style=\"text-align: left; width: 800px; height: 1px;\"border=\"1\" cellpadding=\"2\" cellspacing=\"2\"><tbody><tr><td style=\"width: 25%;\">Program</td><td style=\"\"><b><a href=\"$file\">$file</a></b></td></tr>";
+	$lines = file( "$file" );
+        for( $i = 0; $i < 10; $i++ )
+		{
+    		if (preg_match('(^# .Revision: )', $lines[$i]) )
+    			{
+        		$version = ereg_replace( '^# .Revision:', '', $lines[$i] );
+        		$version = ereg_replace( ' \$', '', $version );
+     			}
+    		if (preg_match('(# DESC: )', $lines[$i]) )
+    			{
+        		$desc = ereg_replace( "# DESC: ", "", $lines[$i] );
+    			}
+    		if (preg_match('(^# .Author: )', $lines[$i]) )
+    			{
+        		$author = ereg_replace( '^# .Author:', '', $lines[$i] );
+        		$author = ereg_replace( ' \$', '', $author );
+    			}
+		} 
+	echo "<tr><td style=\"width: 25%;\">Description</td><td style=\"\">$desc</td></tr><tr><td style=\"width: 25%;\">Author</td><td style=\"\">$author</td></tr><tr><td style=\"width: 25%;\">Version</td><td style=\"\">$version</td></tr></tbody></table><br>";
+        }
+	$desc = "";
+	$author = "";
+	$version = "";
+    }
+    // Close
+    closedir($dir_handle);
+echo '</body></div>';
+?> 
+
