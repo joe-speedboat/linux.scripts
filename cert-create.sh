@@ -19,6 +19,7 @@ umask 077
 
 CDIR=/tmp/cert
 CNAME=`hostname -s`
+FQDN=`hostname`
 CDAYS=3650
 
 test -d $CDIR/private || mkdir -p $CDIR/private
@@ -30,7 +31,6 @@ fi
 
 openssl genrsa -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime 2048 > $CDIR/private/$CNAME.key 2> /dev/null
 
-FQDN=`hostname`
 if [ "x${FQDN}" = "x" ]; then
    FQDN=localhost.localdomain
 fi
