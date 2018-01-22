@@ -24,5 +24,4 @@ do
    done
 done
 
-grep .ansible_all_doc.txt .bashrc || echo 'alias adoc="less $HOME/.ansible_all_doc.txt"'
-
+grep .ansible_all_doc.txt .bashrc || echo 'alias adoc="less $HOME/.ansible_all_doc.txt"' >> .bashrc
