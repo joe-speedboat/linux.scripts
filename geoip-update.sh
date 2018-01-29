@@ -11,7 +11,6 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
-
 test -d /srv/geoip || mkdir -p /srv/geoip
 cd /srv/geoip
 
@@ -19,10 +18,6 @@ rm -f GeoLite2-City.*
 wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz
 gunzip GeoLite2-City.mmdb.gz
 
-/usr/bin/systemctl restart graylog-server
-[root@graylog ~]# find /srv/geoip/
-/srv/geoip/
-/srv/geoip/GeoLite2-City.mmdb
-
 strings /srv/geoip/GeoLite2-City.mmdb | tail -20 | grep -q GeoLite
 exit $?
+
