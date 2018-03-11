@@ -16,20 +16,17 @@
 # 1 2 * * * /home/vbackup/bin/vcsa_65_backup_scp.sh
 
 ##### EDITABLE BY USER to specify vCenter Server instance and backup destination. #####
-VC_ADDRESS='vcenter1.lab.local'
+VC_ADDRESS='vcenter1.example.com'
 VC_USER='administrator@vsphere.local'
-VC_PASSWORD='LabVC.secret'
+VC_PASSWORD='letmein!'
 BACKUP_ADDRESS='192.168.10.55'
 BACKUP_USER='vbackup'
-BACKUP_PASSWORD='vbackup.secret'
+BACKUP_PASSWORD='backmeup!'
 BACKUP_FOLDER="/home/vbackup/$VC_ADDRESS"
 TIME=$(date +%Y-%m-%d-%H-%M-%S)
 BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
-BACKUP_LOG="$BACKUP_FOLDER/$TIME/$(basename $0).log"
 BACKUP_KEEP=2 # keep this amount of backups in place
 ############################
-
-test -d $BACKUP_FOLDER/$TIME || mkdir -p $BACKUP_FOLDER/$TIME
 
 # Authenticate with basic credentials.
 curl -s -u "$VC_USER:$VC_PASSWORD" \
@@ -52,21 +49,21 @@ cat << EOF >task.json
 EOF
 
 # Issue a request to start the backup operation.
-echo Starting backup $TIME >>$BACKUP_LOG
+logger -t $(basename $0) "Starting backup $TIME"
 curl -s -k --cookie cookies.txt \
    -H 'Accept:application/json' \
    -H 'Content-Type:application/json' \
    -X POST \
-   --data @task.json 2>>$BACKUP_LOG >response.txt \
+   --data @task.json 2>>response.err >response.txt \
    "https://$VC_ADDRESS/rest/appliance/recovery/backup/job"
-cat response.txt >>$BACKUP_LOG
-echo '' >>$BACKUP_LOG
+cat response.err | logger -t $(basename $0)
+cat response.txt | logger -t $(basename $0)
 
 # Parse the response to locate the unique identifier of the backup operation.
 ID=$(awk '{if (match($0,/"id":"\w+-\w+-\w+"/)) \
           print substr($0, RSTART+6, RLENGTH-7);}' \
          response.txt)
-echo 'Backup job id: '$ID
+logger -t $(basename $0) "Backup job id: $ID"
 
 # Monitor progress of the operation until it is complete.
 PROGRESS=INPROGRESS
@@ -78,40 +75,31 @@ do
        --globoff \
        "https://$VC_ADDRESS/rest/appliance/recovery/backup/job/$ID" \
        >response.txt
-     cat response.txt >>$BACKUP_LOG
-     echo ''  >>$BACKUP_LOG
+     cat response.txt | logger -t $(basename $0)
      PROGRESS=$(awk '{if (match($0,/"state":"\w+"/)) \
                      print substr($0, RSTART+9, RLENGTH-10);}' \
                     response.txt)
-     echo 'Backup job state: '$PROGRESS
+     echo "Backup job state: $PROGRESS"
+     logger -t $(basename $0) "Backup job state: $PROGRESS"
 done
 
 # Report job completion and clean up temporary files.
-echo ''
-echo "Backup job completion status: $PROGRESS"
+logger -t $(basename $0) "Backup job completion status: $PROGRESS"
 rm -f task.json
 rm -f response.txt
+rm -f response.err
 rm -f cookies.txt
-echo '============================================================='  >>$BACKUP_LOG
 
-# archive all the backup logs into syslog
-cat $BACKUP_LOG | while read log
-do
-   logger -t $(basename $0) -p user.info "JOB-LOGS: $log"
-done
-
-
-sleep 10s
 if [ "$PROGRESS" == "SUCCEEDED" ]
 then
-  egrep 'BackupSize|StartTime|Duration|EndTime' $BACKUP_INVENTORY | sed 's/["|,]//g'
-  echo "INFO: removing old backups if needed. We keep $BACKUP_KEEP of them"
+  egrep 'BackupSize|StartTime|Duration|EndTime' $BACKUP_INVENTORY | sed 's/["|,]//g' | logger -t $(basename $0)
+  logger -t $(basename $0) "INFO: removing old backups if needed. We keep $BACKUP_KEEP of them"
   test -d $BACKUP_FOLDER || exit 1
-  ls -1d $BACKUP_FOLDER/*-*-*-*-* | sort -n | head -n-$BACKUP_KEEP | xargs rm -frv  
+  ls -1d $BACKUP_FOLDER/*-*-*-*-* | sort -n | head -n-$BACKUP_KEEP | xargs rm -frv | logger -t $(basename $0)
+  logger -t $(basename $0) "INFO: backup finished"
   echo "INFO: backup finished"
-  logger -t $(basename $0) -p user.info "INFO: backup finished"
 else
-  echo "ERROR: backup failed, please check $BACKUP_LOG"
-  logger -t $(basename $0) -p user.err "ERROR: backup failed, please check $BACKUP_LOG"
+  echo "ERROR: backup failed, please check syslog"
+  logger -t $(basename $0) "ERROR: backup failed"
 fi
 
