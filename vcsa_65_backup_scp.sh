@@ -92,6 +92,13 @@ rm -f response.txt
 rm -f cookies.txt
 echo '============================================================='  >>$BACKUP_LOG
 
+# archive all the backup logs into syslog
+cat $BACKUP_LOG | while read log
+do
+   logger -t $(basename $0) -p user.info "JOB-LOGS: $log"
+done
+
+
 sleep 10s
 if [ "$PROGRESS" == "SUCCEEDED" ]
 then
@@ -100,7 +107,7 @@ then
   test -d $BACKUP_FOLDER || exit 1
   ls -1d $BACKUP_FOLDER/*-*-*-*-* | sort -n | head -n-$BACKUP_KEEP | xargs rm -frv  
   echo "INFO: backup finished"
-  logger -t $(basename $0) -p user.err "INFO: backup finished"
+  logger -t $(basename $0) -p user.info "INFO: backup finished"
 else
   echo "ERROR: backup failed, please check $BACKUP_LOG"
   logger -t $(basename $0) -p user.err "ERROR: backup failed, please check $BACKUP_LOG"
