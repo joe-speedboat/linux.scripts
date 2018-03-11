@@ -25,6 +25,7 @@ BACKUP_PASSWORD='vbackup.secret'
 BACKUP_FOLDER="/home/vbackup/$VC_ADDRESS"
 TIME=$(date +%Y-%m-%d-%H-%M-%S)
 BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
+BACKUP_LOG="$BACKUP_FOLDER/$TIME/$(basename $0).log"
 BACKUP_KEEP=2 # keep this amount of backups in place
 ############################
 
@@ -49,15 +50,15 @@ cat << EOF >task.json
 EOF
 
 # Issue a request to start the backup operation.
-echo Starting backup $TIME >>backup.log
+echo Starting backup $TIME >>$BACKUP_LOG
 curl -s -k --cookie cookies.txt \
    -H 'Accept:application/json' \
    -H 'Content-Type:application/json' \
    -X POST \
-   --data @task.json 2>>backup.log >response.txt \
+   --data @task.json 2>>$BACKUP_LOG >response.txt \
    "https://$VC_ADDRESS/rest/appliance/recovery/backup/job"
-cat response.txt >>backup.log
-echo '' >>backup.log
+cat response.txt >>$BACKUP_LOG
+echo '' >>$BACKUP_LOG
 
 # Parse the response to locate the unique identifier of the backup operation.
 ID=$(awk '{if (match($0,/"id":"\w+-\w+-\w+"/)) \
@@ -75,8 +76,8 @@ do
        --globoff \
        "https://$VC_ADDRESS/rest/appliance/recovery/backup/job/$ID" \
        >response.txt
-     cat response.txt >>backup.log
-     echo ''  >>backup.log
+     cat response.txt >>$BACKUP_LOG
+     echo ''  >>$BACKUP_LOG
      PROGRESS=$(awk '{if (match($0,/"state":"\w+"/)) \
                      print substr($0, RSTART+9, RLENGTH-10);}' \
                     response.txt)
@@ -89,7 +90,7 @@ echo "Backup job completion status: $PROGRESS"
 rm -f task.json
 rm -f response.txt
 rm -f cookies.txt
-echo ''  >>backup.log
+echo '============================================================='  >>$BACKUP_LOG
 
 sleep 10s
 if [ "$PROGRESS" == "SUCCEEDED" ]
@@ -101,7 +102,7 @@ then
   echo "INFO: backup finished"
   logger -t $(basename $0) -p user.err "INFO: backup finished"
 else
-  echo "ERROR: backup failed, please check backup.log"
-  logger -t $(basename $0) -p user.err "ERROR: backup failed, please check backup.log"
+  echo "ERROR: backup failed, please check $BACKUP_LOG"
+  logger -t $(basename $0) -p user.err "ERROR: backup failed, please check $BACKUP_LOG"
 fi
 
