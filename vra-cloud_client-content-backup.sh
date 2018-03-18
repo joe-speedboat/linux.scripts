@@ -89,7 +89,7 @@ do
    name_col="$(echo $item | cut -d, -f3)"
    list_cmd="vra $item_type list --format csv --pageSize 1000"
    echo "$CC $list_cmd" >> cc.history
-   $CC $list_cmd 2>/dev/null | egrep '..*,..*'  | egrep -v '^vRA |^IaaS |^VCO '> $item_type.detail.list
+   $CC $list_cmd 2>/dev/null | egrep '..*,..*'  | egrep -v '^vRA |^IaaS |^VCO | ERROR '> $item_type.detail.list
    item_count="$(cat $item_type.detail.list | grep ',' | wc -l)"
    if [ $item_count -gt 1 ]
    then
