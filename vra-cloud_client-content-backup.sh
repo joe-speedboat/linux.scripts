@@ -78,7 +78,7 @@ blueprint,1,2,vra blueprint detail --id __ID__
 businessgroup,2,1,vra businessgroup detail --id __ID__
 catalog,1,4,vra catalog detail --id __ID__
 reservation,2,1,vra reservation detail --id __ID__
-endpoint,1,2,vra endpoint export __ID__
+endpoint,1,2,vra endpoint export --filename endpoint.detail
 entitlement,1,2,vra entitlement detail --id __ID__
 machineprefix,1,2,vra machineprefix list
 # machine,1,1,vra machines detail --id __ID__
@@ -97,7 +97,7 @@ do
      do
        element_id="$(echo $element | cut -d, -f$id_col)"
        element_name="$(echo $element | cut -d, -f$name_col)"
-       element_cmd=$(echo $item | cut -d, -f4 | sed "s/__ID__/\"$element_id\"/g")
+       element_cmd=$(echo $item | cut -d, -f4 | sed "s/__ID__/\"$element_id\"/g;s/__NAME__/\"$element_name\"/g")
        echo "$CC $element_cmd" >> cc.history
        $CC $element_cmd 2>/dev/null > $item_type-$element_name.detail
        [ $? -eq 0 ] && RC_STATUS='SUCCESS' || RC_STATUS='FAIL'
