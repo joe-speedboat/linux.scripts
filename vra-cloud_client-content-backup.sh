@@ -101,7 +101,7 @@ do
        echo "$CC $element_cmd" >> cc.history
        $CC $element_cmd 2>/dev/null > $item_type-$element_name.detail
        [ $? -eq 0 ] && RC_STATUS='SUCCESS' || RC_STATUS='FAIL'
-       logger -t $(basename $0) "detail log export of: $content_type / $content_name with status $RC_STATUS"
+       logger -t $(basename $0) "detail log export of: $content_type / $element_name with status $RC_STATUS"
      done
    fi
 done
