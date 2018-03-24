@@ -32,10 +32,4 @@ done
 
 
 ################################################################################
-# $Log: backup-mysql.sh,v $
-# Revision 1.2  2014/10/10 08:30:48  chris
-# supressed message from table mysql.event
-#
-# Revision 1.1  2014/06/27 09:19:51  chris
-# Initial revision
-#
+
