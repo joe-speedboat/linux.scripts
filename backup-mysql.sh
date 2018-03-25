@@ -21,21 +21,15 @@
 # user=your_login
 # password=your_password
 
-BDIR="/backup/mysql"
+BDIR="/srv/backup/mysql"
 
 test -d $BDIR || mkdir -p $BDIR
 
-for DB in $( mysql -N -B -e "show databases" | grep -v information_schema )
+for DB in $( mysql -N -B -e "show databases" | egrep -v 'information_schema|performance_schema' )
 do
-  ( mysqldump $DB --single-transaction | gzip > $BDIR/$DB.mysql.gz ) 2>&1 | grep -v 'Skipping the data of table mysql.event'
+  mysqldump $DB --single-transaction | gzip > $BDIR/$DB.mysql.gz
 done
 
 
 ################################################################################
-# $Log: backup-mysql.sh,v $
-# Revision 1.2  2014/10/10 08:30:48  chris
-# supressed message from table mysql.event
-#
-# Revision 1.1  2014/06/27 09:19:51  chris
-# Initial revision
-#
+
