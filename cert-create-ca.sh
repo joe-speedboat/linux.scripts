@@ -47,6 +47,7 @@ then
 else
    echo "------ create root key"
    openssl genrsa -out "${CA_DIR}/ca/root.key.pem" $CA_KEYLEN
+   find "${CA_DIR}/ca/root.key.pem"
 fi
 if [ -f "${CA_DIR}/ca/root.crt.pem" ]
 then
@@ -54,6 +55,7 @@ then
 else
    echo "------ create intermediate cert"
    openssl req -x509 -new -nodes -key "${CA_DIR}/ca/root.key.pem" -days $DAYS -out "${CA_DIR}/ca/root.crt.pem" -subj "$CA_SUBJ"
+   find  "${CA_DIR}/ca/root.crt.pem"
 fi
 if [ -f "${BASE_DIR}/servers/${HOSTF}_privkey.pem" ]
 then
