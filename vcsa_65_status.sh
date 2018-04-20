@@ -11,10 +11,10 @@
 # INSPIRED BY: https://pubs.vmware.com/vsphere-6-5/index.jsp?topic=%2Fcom.vmware.vsphere.vcsapg-rest.doc%2FGUID-222400F3-678E-4028-874F-1F83036D2E85.html 
 
 # YOU CAN ADD THIS TO CRON IF YOU WANT TO RUN SCHEDULED ######################################
-# curl /usr/local/sbin/vcsa_65_status.sh
-# chmod 0700 /usr/local/sbin/vcsa_65_status.sh
+# curl https://raw.githubusercontent.com/joe-speedboat/scripts/master/vcsa_65_status.sh > /usr/local/bin/vcsa_65_status.sh
+# chmod 0700 /usr/local/bin/vcsa_65_status.sh
 # crontab -e root
-# 1 3 * * * /usr/local/sbin/vcsa_65_status.sh > /storage/log/vcsa_65_status-week-$(date '+%V').log
+# 1 3 * * * /usr/local/bin/vcsa_65_status.sh > /storage/log/vcsa_65_status-week-$(date '+%V').log
 
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/java/jre-vmware/bin:/opt/vmware/bin:/opt/vmware/bin
 
