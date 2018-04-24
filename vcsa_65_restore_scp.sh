@@ -44,9 +44,9 @@ cat response.txt >> restore.log
 echo '' >> restore.log
 
 # Monitor progress of the operation until it is complete.
-STATE=INPROGRESS
+STATE=STARTING
 PROGRESS=0
-until [ "$STATE" != "INPROGRESS" ]
+until [ "$STATE" != "INPROGRESS" -a "$STATE" != "STARTING" ]
 do
     echo "Restore job state: $STATE ($PROGRESS%)"
     sleep 10s
@@ -67,7 +67,13 @@ do
 done
 # Report job completion and clean up temporary files.
 echo ''
-echo Restore job completed.
+echo Restore job has finished with state: $STATE
 rm -f task.json
 rm -f response.txt
 echo '' >> restore.log
+echo
+echo "For more details about restore, check the vCSA restore log:
+      $VC_USER@$VC_ADDRESS:/storage/log/vmware/applmgmt/backupRestoreAPI.log"
+echo "============= restore.log ============="
+cat restore.log
+
