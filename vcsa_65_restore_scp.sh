@@ -67,7 +67,7 @@ do
 done
 # Report job completion and clean up temporary files.
 echo ''
-echo Restore job has finished with state: $STATE
+echo Restore job has finished
 rm -f task.json
 rm -f response.txt
 echo '' >> restore.log
