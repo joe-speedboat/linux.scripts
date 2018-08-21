@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 #########################################################################################
-# DESC: update existing luadns A record with wanip (dyndns helper script)
+# DESC: update luadns A record with wanip
 #########################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
@@ -13,14 +13,16 @@
 
 #--------------------------------------------------------
 logit(){
-   echo "DEBUG: $*"
+   logger -t $(basename $0) "$*"
+   echo "DEBUG LOG: $*"
 }
 #--------------------------------------------------------
 
-LuaKey="4c4hfdgjgfhjuitjkghjdfghd"
+LuaKey="4ceb50f2atghdsfvsdfhgdghy3456720"
 LuaEmail="lua@bitbull.ch"
 LuaApi="https://api.luadns.com/v1"
-DynDnsARecord="test.bitbull.ch"
+DynDnsARecord="office.bitbull.ch"
+DynDnsTtl=300
 DynDnsDomain=`echo $DynDnsARecord | cut -d. -f2-`
 LuaNs=`host -t NS $DynDnsDomain | grep 'name server' | head -1 | sed 's/.* name server //'`
 WanIp=`wget -q -O - ip.changeip.com | grep ^[0-9]`
@@ -46,10 +48,13 @@ then
 logit updating $DynDnsARecord with IP $WanIp
    MSG=$(curl --silent -u $LuaEmail:$LuaKey \
         -X PUT \
-        -d "{\"name\":\"$DynDnsARecord.\",\"type\":\"A\",\"content\":\"$WanIp\",\"ttl\":60}" \
+        -d "{\"name\":\"$DynDnsARecord.\",\"type\":\"A\",\"content\":\"$WanIp\",\"ttl\":$DynDnsTtl}" \
         -H 'Accept: application/json' \
         https://api.luadns.com/v1/zones/$LuaDomainId/records/$LuaARecordId 2>&1)
    logit http reply: $MSG
 else
    logit NO update needed
 fi
+
+logit $(basename $0) finished
+
