@@ -11,13 +11,26 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
-#--------------------------------------------------------
+# HOWTO SETUP ###########################################################################
+# - register luadns account, setup domain and create the A record you want to "dyn update"
+# - log into linux system within your dyn network you want to update
+# cp luadns-updater.sh /usr/local/bin/luadns-updater.sh
+# vi /usr/local/bin/luadns-updater.sh #update LuaKey, LuaEmail & DynDnsARecord var
+# chmod 0700 /usr/local/bin/luadns-updater.sh
+# crontab -e 
+#    */15 * * * * /usr/local/bin/luadns-updater.sh >/dev/null
+
+# FUNCTIONS #############################################################################
 logit(){
    logger -t $(basename $0) "$*"
    echo "DEBUG LOG: $*"
 }
-#--------------------------------------------------------
 
+# PRE REQ CHECKS  #######################################################################
+which curl >/dev/null 2>&1 || (logit curl is not installed, please install first ; exit 1)
+which host >/dev/null 2>&1 || (logit "host is not installed, please install first (dns-utils or bind-untils)" ; exit 1)
+
+#########################################################################################
 LuaKey="4ceb50f2atghdsfvsdfhgdghy3456720"
 LuaEmail="lua@bitbull.ch"
 LuaApi="https://api.luadns.com/v1"
@@ -43,7 +56,7 @@ LuaARecordId=$(curl --silent -u $LuaEmail:$LuaKey -H 'Accept: application/json' 
 logit LuaARecordId=$LuaARecordId
 
 
-if [ $WanIp != $DnsRecIp ]
+if [ "$WanIp" != "$DnsRecIp" ]
 then
 logit updating $DynDnsARecord with IP $WanIp
    MSG=$(curl --silent -u $LuaEmail:$LuaKey \
