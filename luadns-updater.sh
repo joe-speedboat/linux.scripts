@@ -31,10 +31,10 @@ which curl >/dev/null 2>&1 || (logit curl is not installed, please install first
 which host >/dev/null 2>&1 || (logit "host is not installed, please install first (dns-utils or bind-untils)" ; exit 1)
 
 #########################################################################################
-LuaKey="4ceb50f2atghdsfvsdfhgdghy3456720"
+LuaKey="4ceb50f2atgaddsffvcs1dfghy3456720"
 LuaEmail="lua@bitbull.ch"
 LuaApi="https://api.luadns.com/v1"
-DynDnsARecord="office.bitbull.ch"
+DynDnsARecord="web1.bitbull.ch"
 DynDnsTtl=300
 DynDnsDomain=`echo $DynDnsARecord | cut -d. -f2-`
 LuaNs=`host -t NS $DynDnsDomain | grep 'name server' | head -1 | sed 's/.* name server //'`

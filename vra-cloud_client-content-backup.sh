@@ -43,17 +43,23 @@
 ###############################################################################
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
-BDIR=/home/chris/vra-backup
+BDIR=/storage/log/vra-cc-backup
 KEEPGEN=30
 DATE=$(date '+%Y%m%d-%H%M')
-CC=/usr/local/bin/cloudclient
-
+CC=/root/bin/cc/bin/cloudclient.sh
+export JAVA_HOME=/usr/java/jre-vmware
+### PREP NAMED PIPE ###########################################################
 test -d $BDIR/$DATE || mkdir -p $BDIR/$DATE
-cd $BDIR/$DATE
 
+### PROGRAM STARTS HERE #######################################################
+# make sure cloudclient is ready for exporting content
+$CC vra version || exit 1
+
+cd $BDIR/$DATE
 logger -t $(basename $0) "cloud client backup started"
-echo "$CC vra content list --format csv --pageSize 1000" >> cc.history
-$CC vra content list --format csv --pageSize 1000 2>&1 | sed -n '/^id,/,$p' | grep ',.*,.*,'  > content.list
+
+echo "vra content list --format csv --pageSize 10000" >> cc.history
+$CC vra content list --format csv --pageSize 10000 2>&1 | sed -n '/^id,/,$p' | grep ',.*,.*,'  > content.list
 [ $? -eq 0 ] && RC_STATUS='SUCCESS' || RC_STATUS='FAIL'
 logger -t $(basename $0) "exported content.list with status $RC_STATUS"
 
@@ -70,7 +76,7 @@ do
 done
 
 echo '
-# type, id colum, name colum, detail cmd
+# type, id_colum, name_colum, detail_cmd
 entitlement,1,2,vra entitlement detail --id __ID__
 approvalpolicy,2,1,vra approvalpolicy detail --id __ID__
 fabricgroup,2,1,vra fabricgroup detail --id __ID__
@@ -81,7 +87,7 @@ reservation,2,1,vra reservation detail --id __ID__
 endpoint,1,2,vra endpoint export --filename endpoint.detail
 entitlement,1,2,vra entitlement detail --id __ID__
 machineprefix,1,2,vra machineprefix list
-# machine,1,1,vra machines detail --id __ID__
+# machines,4,1,vra machines detail --id __NAME__
 ' | egrep -v '^$|^#' | while read item
 do
    item_type="$(echo $item | cut -d, -f1)"
@@ -99,12 +105,30 @@ do
        element_name="$(echo $element | cut -d, -f$name_col)"
        element_cmd=$(echo $item | cut -d, -f4 | sed "s/__ID__/\"$element_id\"/g;s/__NAME__/\"$element_name\"/g")
        echo "$CC $element_cmd" >> cc.history
-       $CC $element_cmd 2>/dev/null > $item_type-$element_name.detail
+       echo "# TYPE=$item_type / NAME=$element_name / ID=$element_id" > $item_type-$element_name.detail
+       $CC $element_cmd 2>/dev/null >> $item_type-$element_name.detail
        [ $? -eq 0 ] && RC_STATUS='SUCCESS' || RC_STATUS='FAIL'
        logger -t $(basename $0) "detail log export of: $content_type / $element_name with status $RC_STATUS"
      done
    fi
 done
+
+### EXPORTING SPECIAL CONTENT #################################################
+cd $BDIR/$DATE
+$CC vra logs recentevents --pageSize 1000000 --format csv > vra-logs-recentevents.log
+# create full backup package for easy restore
+content_ids="$(cat content.list | sed '1d' | cut -d, -f1 | tr '\n' ',' | sed 's/,$//')"
+$CC vra package list --format csv --pageSize 1000 > vra-package.list
+if [ $(cat vra-package.list | grep cc-vra-content-package | wc -l) -gt 0 ] #found old backup package, we need to remove first
+then
+   logger -t $(basename $0) "WARN: found old content package, we delete before next export"
+   $CC vra package delete --pkgId $(cat vra-package.list | grep cc-vra-content-package | cut -d, -f1 | head -1) >> vra-package.list.log
+fi
+$CC vra package create --name "cc-vra-content-package" --ids $content_ids >> vra-package.list.log
+$CC vra package list --format csv --pageSize 1000 > vra-package.list
+$CC vra package export --path ./ --pkgId $(cat vra-package.list | grep cc-vra-content-package | cut -d, -f1) >> vra-package.list.log
+$CC vra package delete --pkgId $(cat vra-package.list | grep cc-vra-content-package | cut -d, -f1 | head -1) >> vra-package.list.log
+
 
 logger -t $(basename $0) "cloud client backup fineshed"
 
@@ -116,6 +140,8 @@ do
    rm -rf $BDIR/$DEL_BKP 
 done
 
+
 ### SOME NOTES
 # required --ids: Comma separated list of content ids (the id field); no default value
 # vra package create --name full-export --ids
+
