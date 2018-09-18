@@ -1,17 +1,20 @@
 #!/bin/bash
+#########################################################################################
 # DESC: emulate ilo_ssh device on /usr/bin/virsh kvm host to emulate real iLo fencing on nested VMs
-# $Revision: 1.2 $
-# $RCSfile: add-fence-vm.sh,v $
-# $Author: chris $
-##########################################################################################################
+# tested with CentOS 7.5 on oVirt 4.2
+#########################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
-
+#
 # This software is licensed to you under the GNU General Public License.
 # There is NO WARRANTY for this software, express or
 # implied, including the implied warranties of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
+
+# HOWTO INSTALL #######################################
+# add-fence-vm.sh [ov-node] [password]
+#    eg: add-fence-vm.sh ov-compute1 redhat
 
 export LANG=en
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
