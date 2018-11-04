@@ -43,11 +43,10 @@
 ###############################################################################
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
-BDIR=/storage/log/vra-cc-backup
+BDIR=/home/chris/vra-backup
 KEEPGEN=30
 DATE=$(date '+%Y%m%d-%H%M')
-CC=/root/bin/cc/bin/cloudclient.sh
-export JAVA_HOME=/usr/java/jre-vmware
+CC=/usr/local/bin/cloudclient
 ### PREP NAMED PIPE ###########################################################
 test -d $BDIR/$DATE || mkdir -p $BDIR/$DATE
 

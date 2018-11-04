@@ -1,3 +1,0 @@
-{"progress":0,"state":"FAILED","messages":[{"default_message":"As firstboot was run on this system, restore cannot be performed!","args":[],"id":"com.vmware.applmgmt.restore.validation.firstboot_already_run"}]}
-{"messages":[{"default_message":"Status for 'RESTORE' does not exist.","args":["RESTORE"],"id":"com.vmware.applmgmt.err_status_does_not_exist"}]}
-
