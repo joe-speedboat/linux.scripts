@@ -14,10 +14,14 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
+# CHANGELOG:
+###############################################################################################################
+# 20181209 -> changed default vdoc filename to $TOPIC.txt
+#             convert: find vdoc/ -type f -not -name '*.txt' -exec mv "{}" "{}.txt" \;
 
-DOC="$HOME/data/doc"
+DOC="$HOME/vdoc"
 FIND="$*"
-EDIT=vi
+EDIT=vim
 HEAD="#########################################################################################################
 # PROJEKT: $(echo $FIND | cut -d\  -f2)
 # OWNER: $(who am i | awk '{print $1}')
@@ -71,7 +75,7 @@ fi
 do-search()
 {
    SEARCHED=
-   FILES=$(find $DOC -type f -exec grep -li "$FIND" {} \;)
+   FILES=$(fgrep -lir "$FIND" "$DOC/" | sort )
    COUNT=$(echo $FILES | wc -w)
    if [ "$COUNT" == "0" ] 
    then
@@ -97,7 +101,10 @@ select-file()
    echo
    for NR in $(seq 1 $COUNT)
    do
-      echo -n "   " ; echo -n "$NR) " ; echo $FILES | cut -d\  -f$NR | sed "s#$DOC/##g"
+      echo -n "   "
+      [ $COUNT -ge 10 ] &&  [ $NR -le 9 ] && echo -n ' '
+      echo -n "$NR) " 
+      echo $FILES | cut -d\  -f$NR | sed "s#$DOC/##g;s/.txt$//"
       NR=$(( $NR + 1 ))
    done
    echo "   q) QUIT"
