@@ -56,9 +56,9 @@ echo "$FIND" | egrep -q '^-h|--help|--usage|^$' && help
 echo "$FIND" | egrep -q '^-c'
 if [ "$?" == "0" ]
 then
-   echo "$HEAD" >> $DOC/$(echo $FIND | cut -d" "  -f2)
    mkdir -p $(dirname $DOC/$(echo $FIND | cut -d" "  -f2))
-   $EDIT $DOC/$(echo $FIND | cut -d" "  -f2)
+   echo "$HEAD" >> $DOC/$(echo $FIND | cut -d" "  -f2).txt
+   $EDIT $DOC/$(echo $FIND | cut -d" "  -f2).txt
    exit 0
 fi
 
