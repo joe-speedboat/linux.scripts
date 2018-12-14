@@ -183,7 +183,7 @@ dodelete(){ #---------------------------------------------
    for DISK in $( virsh domblklist $VM | sed '1,2d;/^$/d;s|.* /|/|g' )
    do
       log info deleting DISK=$DISK
-      if qemu-img info $DISK | grep -q 'file format: qcow2' ; then
+      if qemu-img info -U $DISK | grep -q 'file format: qcow2' ; then
          rm -f $DISK || log error could not delete DISK=$DISK
       else
          log warning DISK=$DISK is no qcow2 Disk, I do not touch this things
@@ -228,7 +228,7 @@ listvm(){ #---------------------------------------------
       test -f $LOCAL_DISK 
       if [ $? -eq 0 ] ; then
          DISK_SIZE="$(du -mh $LOCAL_DISK | awk '{print $1}')"
-         DISK_SIZE="$DISK_SIZE,$(qemu-img info $LOCAL_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         DISK_SIZE="$DISK_SIZE,$(qemu-img info -U $LOCAL_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
       fi
       echo "$VM_DISK,$LOCAL_DISK,$DISK_SIZE"
       DISK_SIZE=
@@ -263,12 +263,12 @@ dobackup(){ #----------------------------------------------
          log warning "DISK=$DISK is excluded for backup by user"
          log debug storing disk name and size, will create empty one on restore
          test -f $BACKUPDEST/$VM.disklist || echo "type;size;name;path" >> $BACKUPDEST/$VM.disklist
-         qsize="$(qemu-img info $DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         qsize="$(qemu-img info -U $DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
          qname="$(basename $DISK)"
          qpath="$(dirname $DISK)"
          echo "qcow2;$qsize;$qname;$qpath" >> $BACKUPDEST/$VM.disklist
       else
-         qemu-img info $DISK | grep -q 'file format: qcow2'
+         qemu-img info -U $DISK | grep -q 'file format: qcow2'
          if [ $? -ne 0 ] ; then # found disk other than qcow2
             log warning DISK=$DISK is not qcow2, so I add this disk to exclude list
             DISK_EXCLUDES_GREP="$DISK_EXCLUDES_GREP|$DISK\$"
@@ -286,13 +286,13 @@ dobackup(){ #----------------------------------------------
    do
       VM_IDISK=$(virsh domblklist $VM | grep $DISK | awk '{print $1}') # vm internal disk name
       VM_SNAP=$DISK
-      VM_DISK=$(qemu-img info $VM_SNAP | grep 'backing file:' | awk '{print $3}') # vm main disk file
+      VM_DISK=$(qemu-img info -U $VM_SNAP | grep 'backing file:' | awk '{print $3}') # vm main disk file
       echo $VM_DISK | egrep -q "$DISK_EXCLUDES_GREP"
       if [ $? -eq 0 ] ; then # found excluded disk
          log info found exlcuded disk, skip it: $VM_DISK
       else
          test -f $BACKUPDEST/$VM.disklist || echo "type;size;name;path" >> $BACKUPDEST/$VM.disklist
-         qsize="$(qemu-img info $VM_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         qsize="$(qemu-img info -U $VM_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
          qname="$(basename $VM_DISK)"
          qpath="$(dirname $VM_DISK)"
          echo "qcow2;$qsize;$qname;$qpath" >> $BACKUPDEST/$VM.disklist
@@ -354,7 +354,7 @@ docleanupbackup(){ #----------------------------------------------
          VM=$(echo $BDISK | cut -d, -f1)
          VM_SNAP=$(echo $BDISK | cut -d, -f3)
          VM_IDISK=$(echo $BDISK | cut -d, -f2)
-         VM_DISK=$(qemu-img info $VM_SNAP | grep 'backing file:' | awk '{print $3}') # vm main disk file
+         VM_DISK=$(qemu-img info -U $VM_SNAP | grep 'backing file:' | awk '{print $3}') # vm main disk file
          VMRUN=0 ; virsh -q list | awk '{print $2}' | egrep -q "^$VM$" && VMRUN=1
          if [ $VMRUN -eq 0 ] ; then # vm is not running
             log info VM is not running, no blockcommit needed
