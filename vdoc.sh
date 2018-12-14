@@ -75,7 +75,7 @@ fi
 do-search()
 {
    SEARCHED=
-   FILES=$(fgrep -lir "$FIND" "$DOC/" | sort )
+   FILES=$(fgrep -lir "$FIND" "$DOC/" | sort)
    COUNT=$(echo $FILES | wc -w)
    if [ "$COUNT" == "0" ] 
    then
