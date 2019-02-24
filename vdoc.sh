@@ -44,7 +44,8 @@ help()
 {
    echo
    echo "   Usage:"
-   echo "   $(basename $0) [search pattern]     search project files"
+   echo "   $(basename $0)    [search pattern]  search project files, archive path excluded"
+   echo "   $(basename $0) -a [search pattern]  search project files, archive path included"
    echo "   $(basename $0) -l                   list group folders"
    echo "   $(basename $0) -c [grp/name]        create new project"
    echo
@@ -72,6 +73,11 @@ then
 fi
 
 
+echo "$FIND" | egrep -q '^-a'
+if [ "$?" == "0" ]
+then
+shift
+FIND="$*"
 do-search()
 {
    SEARCHED=
@@ -90,6 +96,26 @@ do-search()
    fi
    SEARCHED=true
 }
+else
+do-search()
+{
+   SEARCHED=
+   FILES=$(fgrep -lir "$FIND" "$DOC/" |grep -iv /archiv/ | sort)
+   COUNT=$(echo $FILES | wc -w)
+   if [ "$COUNT" == "0" ] 
+   then
+      echo nothing found ...
+      exit 0
+   fi
+   if [ "$COUNT" == "1" ] 
+   then
+      SELECT=1
+      view-file
+      exit 0
+   fi
+   SEARCHED=true
+}
+fi
 
 select-file()
 {
