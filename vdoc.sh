@@ -66,7 +66,7 @@ echo "$FIND" | egrep -q '^-l'
 if [ "$?" == "0" ]
 then
    echo
-   find $DOC -type d | sed "s#$DOC/#   #g" 
+   find "$DOC/" -type d | sed "s#$DOC/#   #g" 
    echo
    exit 0
 fi
