@@ -14,7 +14,7 @@
 
 # HOWTO INSTALL CLOUD CLIENT VRA BACKUP #######################################
 ##### create password file
-# login keyfile --file /home/chris/.cloudclient/cloudclient.pass
+# login keyfile --file /root/.cloudclient/cloudclient.pass
 ##### generate autologin file
 # login autologinfile
 ##### this file is located in your cloudclient software dir
@@ -23,12 +23,12 @@
 # vra_server=vra1.lab.local
 # vra_tenant=lab
 # vra_username=chris@lab.local
-# vra_keyfile=/home/chris/.cloudclient/cloudclient.pass
+# vra_keyfile=/root/.cloudclient/cloudclient.pass
 # vra_iaas_username=chris@lab.local
-# vra_iaas_keyfile=/home/chris/.cloudclient/cloudclient.pass
+# vra_iaas_keyfile=/root/.cloudclient/cloudclient.pass
 # vco_server=vra1.lab.local
 # vco_username=chris@lab.local
-# vco_keyfile=/home/chris/.cloudclient/cloudclient.pass
+# vco_keyfile=/root/.cloudclient/cloudclient.pass
 # ---
 ### CONTENT IN BACKUP DIR #####################################################
 # logs/          -> cloudclient backup logs
@@ -42,11 +42,12 @@
 # diff -y --suppress-common-lines -x *.log -x *.zip -x *.history -r 20180318-2027 20180318-2038 
 ###############################################################################
 
+export JAVA_HOME=/usr/java/jre-vmware
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
-BDIR=/home/chris/vra-backup
+BDIR=/storage/log/vra-backup
 KEEPGEN=30
 DATE=$(date '+%Y%m%d-%H%M')
-CC=/usr/local/bin/cloudclient
+CC=/root/bin/cloudclient/bin/cloudclient.sh
 ### PREP NAMED PIPE ###########################################################
 test -d $BDIR/$DATE || mkdir -p $BDIR/$DATE
 
