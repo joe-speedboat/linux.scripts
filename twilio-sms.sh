@@ -47,7 +47,15 @@ while getopts ":c:u:p:d:v" opt; do
 done
 
 # test configfile
-if [ -n "$CONFIGFILE" -a ! -f "$CONFIGFILE" ]; then echo "Configfile not found: $CONFIGFILE"; usage; fi
+if [ "x" == "x$CONFIGFILE" ]
+then 
+   CONFIGFILE=/etc/twilio-sms.conf
+   if [ -n "$CONFIGFILE" -a ! -f "$CONFIGFILE" ]
+   then
+      echo "Configfile not found: $CONFIGFILE"
+   usage
+   fi
+fi
 
 # source configfile if given
 if [ -n "$CONFIGFILE" ]; then . "$CONFIGFILE";
@@ -76,7 +84,7 @@ if [ -z "$MSG" ]; then usage "No content for the SMS was read from STDIN."; fi;
 for PHONE in "${@:$OPTIND}"; do
 	echo -n "Sending SMS to $PHONE from $CALLERID..."
 	# initiate a curl request to the Twilio REST API, to begin a phone call to that number
-	RESPONSE=`curl -fSs -u "$ACCOUNTSID:$AUTHTOKEN" -d "From=$CALLERID" -d "To=$PHONE" -d "Body=$MSG" "https://api.twilio.com/2010-04-01/Accounts/$ACCOUNTSID/SMS/Messages" 2>&1`
+	RESPONSE=`curl -vvv -fSs -u "$ACCOUNTSID:$AUTHTOKEN" -d "From=$CALLERID" -d "To=$PHONE" -d "Body=$MSG" "https://api.twilio.com/2010-04-01/Accounts/$ACCOUNTSID/Messages" 2>&1`
 	if [ $? -gt 0 ]; then echo "Failed to send SMS to $PHONE: $RESPONSE"
 	else echo "done"
 	fi
