@@ -30,5 +30,5 @@ SMS="`echo $SMS | tr ' ' '_'`"
 echo SMS: $SMS
 echo MOBILE: $MOBILE
 
-curl -k "https://webservice.aspsms.com/aspsmsx2.asmx/SendSimpleTextSMS?UserKey=$UserKey&Password=$Password&Recipients=$MOBILE&Originator=$FROM&MessageText=$SMS"
+curl -k "https://soap.aspsms.com/aspsmsx.asmx/SimpleTextSMS?UserKey=$UserKey&Password=$Password&Recipient=$MOBILE&Originator=$FROM&MessageText=$SMS"
 
