@@ -25,6 +25,7 @@ cat << EOF > task.json
 { "piece":
     {
         "location_type":"SCP",
+        "ignore_warnings": true,
         "location":"scp://$BACKUP_ADDRESS/$BACKUP_FOLDER",
         "location_user":"$BACKUP_USER",
         "location_password":"$BACKUP_PASSWORD"
@@ -38,7 +39,7 @@ curl -s -k -u "$VC_USER:$VC_PASSWORD" \
   -H 'Accept:application/json' \
   -H 'Content-Type:application/json' \
   -X POST \
-  "https://$VC_ADDRESS:5480/rest/com/vmware/appliance/recovery/restore/job" \
+  "https://$VC_ADDRESS:5480/rest/appliance/recovery/restore/job" \
   --data @task.json 2>restore.log >response.txt
 cat response.txt >> restore.log
 echo '' >> restore.log
@@ -46,15 +47,16 @@ echo '' >> restore.log
 # Monitor progress of the operation until it is complete.
 STATE=STARTING
 PROGRESS=0
+MISSING_ANSWER=0 # sometimes API does not respond while restore is running
 until [ "$STATE" != "INPROGRESS" -a "$STATE" != "STARTING" ]
 do
     echo "Restore job state: $STATE ($PROGRESS%)"
-    sleep 10s
+    sleep 5s
     curl -s -k -u "$VC_USER:$VC_PASSWORD" \
       -H 'Accept:application/json' \
       -H 'Content-Type:application/json' \
-      -X POST -d '' \
-      "https://$VC_ADDRESS:5480/rest/com/vmware/appliance/recovery/restore/job?~action=get" \
+      -X GET \
+      "https://$VC_ADDRESS:5480/rest/appliance/recovery/restore/job" \
       >response.txt
     cat response.txt >> restore.log
     echo '' >> restore.log
@@ -64,6 +66,11 @@ do
     STATE=$(awk \
             '{if (match($0,/"state":"\w+"/)) print substr($0, RSTART+9, RLENGTH-10);}' \
             response.txt)
+    if [ $MISSING_ANSWER -lt 4 -a "x$STATE" == "x" ] ; then
+       MISSING_ANSWER=$((MISSING_ANSWER+1))
+       STATE="INPROGRESS"
+       PROGRESS=".."
+    fi
 done
 # Report job completion and clean up temporary files.
 echo ''

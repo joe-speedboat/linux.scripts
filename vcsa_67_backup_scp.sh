@@ -28,6 +28,7 @@ BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
 BACKUP_KEEP=2 # keep this amount of backups in place
 ############################
 
+# Create Backup Folder
 test -d "$BACKUP_FOLDER/$TIME" || mkdir -p "$BACKUP_FOLDER/$TIME"
 
 # Authenticate with basic credentials.
