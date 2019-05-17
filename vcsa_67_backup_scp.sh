@@ -28,6 +28,8 @@ BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
 BACKUP_KEEP=2 # keep this amount of backups in place
 ############################
 
+test -d "$BACKUP_FOLDER/$TIME" || mkdir -p "$BACKUP_FOLDER/$TIME"
+
 # Authenticate with basic credentials.
 curl -s -u "$VC_USER:$VC_PASSWORD" \
    -X POST \
