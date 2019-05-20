@@ -13,7 +13,7 @@
 # YOU CAN ADD THIS TO CRON IF YOU WANT TO RUN SCHEDULED ######################################
 # curl https://raw.githubusercontent.com/joe-speedboat/scripts/master/vcsa_67_status.sh > /usr/local/bin/vcsa_67_status.sh
 # chmod 0700 /usr/local/bin/vcsa_67_status.sh
-# crontab -e root
+# crontab -e -u root
 # 1 3 * * * /usr/local/bin/vcsa_67_status.sh > /storage/log/vcsa_67_status-week-$(date '+%V').log
 
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/java/jre-vmware/bin:/opt/vmware/bin:/opt/vmware/bin
