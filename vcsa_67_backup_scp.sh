@@ -22,7 +22,7 @@ VC_PASSWORD='letmein!'
 BACKUP_ADDRESS='192.168.10.55'
 BACKUP_USER='vbackup'
 BACKUP_PASSWORD='backmeup!'
-BACKUP_FOLDER="/home/vbackup/$VC_ADDRESS"
+BACKUP_FOLDER="/home/$BACKUP_USER/$VC_ADDRESS"
 TIME=$(date +%Y-%m-%d-%H-%M-%S)
 BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
 BACKUP_KEEP=2 # keep this amount of backups in place
@@ -44,7 +44,7 @@ cat << EOF >task.json
          "location_type":"SCP",
          "comment":"Automatic backup",
          "parts":["seat"],
-         "location":"scp://$BACKUP_ADDRESS/$BACKUP_FOLDER/$TIME",
+         "location":"scp://$BACKUP_ADDRESS$BACKUP_FOLDER/$TIME",
          "location_user":"$BACKUP_USER",
          "location_password":"$BACKUP_PASSWORD"
      }
@@ -99,6 +99,10 @@ then
   logger -t $(basename $0) "INFO: removing old backups if needed. We keep $BACKUP_KEEP of them"
   test -d $BACKUP_FOLDER || exit 1
   ls -1d $BACKUP_FOLDER/*-*-*-*-* | sort -n | head -n-$BACKUP_KEEP | xargs rm -frv | logger -t $(basename $0)
+  echo "--------- RESTORE INFORMATION ---------"
+  echo "   LOCATION: scp://$BACKUP_ADDRESS/$BACKUP_FOLDER/$TIME"
+  echo "   USER: $BACKUP_USER"
+  logger -t $(basename $0) "RESTORE_INFORMATION: LOCATION: scp://$BACKUP_ADDRESS$BACKUP_FOLDER/$TIME -- USER: $BACKUP_USER"
   logger -t $(basename $0) "INFO: backup finished"
   echo "INFO: backup finished"
 else
