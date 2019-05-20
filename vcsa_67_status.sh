@@ -44,6 +44,9 @@ df -iP | sed 's/^/     /'
 echo "---------- RPM configfiles md5sum ----------"
 rpm -qa --configfiles | xargs md5sum 2>/dev/null | sed 's/^/     /'
 
+echo "---------- lsof - listen ports ----------"
+lsof -i -P -n | grep LISTEN | sed 's/^/     /'
+
+
 echo "---------- pstree ----------"
 pstree --vt100 -l -u -U | sed 's/^/     /'
-
