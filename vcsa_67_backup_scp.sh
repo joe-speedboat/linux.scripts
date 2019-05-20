@@ -100,7 +100,7 @@ then
   test -d $BACKUP_FOLDER || exit 1
   ls -1d $BACKUP_FOLDER/*-*-*-*-* | sort -n | head -n-$BACKUP_KEEP | xargs rm -frv | logger -t $(basename $0)
   echo "--------- RESTORE INFORMATION ---------"
-  echo "   LOCATION: scp://$BACKUP_ADDRESS/$BACKUP_FOLDER/$TIME"
+  echo "   LOCATION: scp://$BACKUP_ADDRESS$BACKUP_FOLDER/$TIME"
   echo "   USER: $BACKUP_USER"
   logger -t $(basename $0) "RESTORE_INFORMATION: LOCATION: scp://$BACKUP_ADDRESS$BACKUP_FOLDER/$TIME -- USER: $BACKUP_USER"
   logger -t $(basename $0) "INFO: backup finished"
