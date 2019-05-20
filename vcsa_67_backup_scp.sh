@@ -24,7 +24,7 @@ BACKUP_USER='vbackup'
 BACKUP_PASSWORD='backmeup!'
 BACKUP_FOLDER="/home/$BACKUP_USER/$VC_ADDRESS"
 TIME=$(date +%Y-%m-%d-%H-%M-%S)
-BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/backup-metadata.json"
+BACKUP_INVENTORY="$BACKUP_FOLDER/$TIME/*/*/*/backup-metadata.json"
 BACKUP_KEEP=2 # keep this amount of backups in place
 ############################
 
