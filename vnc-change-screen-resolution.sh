@@ -32,7 +32,6 @@ then
    exit
    fi
 else    
-   SCREEN=$(xrandr  | grep ' connected ' | cut -d' ' -f1 | head -1)
    X=$(xdpyinfo | grep dimensions: | awk '{print $2}' | cut -dx -f1)
    Y=$(xdpyinfo | grep dimensions: | awk '{print $2}' | cut -dx -f2)
 
@@ -77,6 +76,7 @@ then
 fi
 
 echo Setting resolution: $RES
+SCREEN=$(xrandr  | grep ' connected ' | cut -d' ' -f1 | head -1)
 xrandr --newmode $RES $(cvt $(echo $RES | tr 'x' ' ') | grep Modeline | cut -d ' ' -f3-)
 xrandr --addmode $SCREEN $RES
 xrandr --output $SCREEN --mode $RES
