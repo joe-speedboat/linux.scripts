@@ -19,7 +19,7 @@ then
    echo "
         WARNING: gtkdialog is missing, GUI not working
         "
-   if [ $# -ne 1 ]
+   if [ $# -ne 1 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]
    then
       echo "
       Usage: 
