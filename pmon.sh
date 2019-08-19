@@ -58,11 +58,3 @@ for col in $cols; do
 done
 echo "" >> $logf
 
-################################################################################
-# $Log: pmon.sh,v $
-# Revision 1.2  2012/06/10 19:18:48  chris
-# auto backup
-#
-# Revision 1.1  2010/01/17 20:40:17  chris
-# Initial revision
-#
