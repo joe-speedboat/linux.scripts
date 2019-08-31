@@ -14,18 +14,13 @@
 bold=$(tput bold)
 reset=$(tput sgr0)
 
-echo
-for c in kvm1 kvm2 kvm3
-do
-   if [ "$c" = "$(uname -n)" ]
-   then
-      echo "$bold $(uname -n | tr 'a-z' 'A-Z') -> Free Mem: $(( $(free -t | grep ^Mem: | awk '{print $7}') / 1024 )) MB $reset"
-      virsh list --all --title | sed 's/^/     /g'
-   echo $reset
-   else
-      echo "$bold $(echo $c | tr 'a-z' 'A-Z') -> Free Mem: $(( $(free -t | grep ^Mem: | awk '{print $7}') / 1024 )) MB $reset"
-      ssh $c "virsh list --all --title" | sed 's/^/     /g'
-      echo $reset
-   fi
-done
+
+echo "$bold"
+echo "$(uname -n | tr 'a-z' 'A-Z') ->"
+echo "      commited mem (running VMs): $(virsh list --name | while read vm; do virsh domstats $vm | grep balloon.maximum ; done | cut -d= -f2 | awk '{s+=$0} END {print s/1024/1024" GB"}')"
+echo "      used mem (running VMs): $(virsh list --name | while read vm; do virsh domstats $vm | grep balloon.current ; done | cut -d= -f2 | awk '{s+=$0} END {print s/1024/1024" GB"}')"
+echo "      virtHost free mem: $(( $(free -t | grep ^Mem: | awk '{print $7}') / 1024 /1024 )) GB"
+virsh list --all --title | sed 's/^/     /g'
+echo $reset
+
 
