@@ -46,7 +46,7 @@ log(){ #---------------------------------------------------
    if [ "$LEVEL" = "ERROR" -o "$LEVEL" = "WARNING" -o "$LEVEL" = "INFO" ] ; then
       echo "$(date '+%Y.%m.%d %H:%M:%S') $(uname -n) $(basename $0):$LEVEL: $*"
       test -d $LOGDIR && echo "$(date '+%Y.%m.%d %H:%M:%S') $(uname -n) $(basename $0):$LEVEL: $*" >> $LOGDIR/$(basename $0).log
-      logger -t $(basename $0) "$LEVEL: $*"
+      logger -t $(basename $0) "$LEVEL: $* VM=$VM"
    fi
    if [ "$LEVEL" = "ERROR" ]
    then
@@ -317,7 +317,7 @@ dobackup(){ #----------------------------------------------
       virsh undefine $VM
       virsh define $BACKUPDEST/$VM.xml
    fi
-   log info backup finished successfully
+   log info backup finished successfully VM=$VM
    log info move finished backup to final destination: $BACKUPDEST_FINAL
    mv $BACKUPDEST $BACKUPDEST_FINAL || log error could not move backup
    BACKUPDEST=$BACKUPDEST_FINAL # from now, log into this dir
