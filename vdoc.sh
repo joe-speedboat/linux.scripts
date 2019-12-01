@@ -77,7 +77,7 @@ do-search(){
 }
 
 select-file(){
-   # clear
+   clear
    echo
    echo "WHICH DOC DO YOU WANT TO SEE ?"
    echo "------------------------------"
@@ -85,7 +85,7 @@ select-file(){
    echo
    for NR in $(seq 1 $COUNT) ; do
       echo -n "   "
-      [ $COUNT -ge 10 ] &&  [ $NR -le 9 ] && echo -n ' '
+      [ $COUNT -ge 10 ] && [ $NR -le 9 ] && echo -n ' '
       echo -n "$NR) " 
       echo $FILES | cut -d\  -f$NR | sed "s#$DOC/##g;s/.txt$//"
       NR=$(( $NR + 1 ))
