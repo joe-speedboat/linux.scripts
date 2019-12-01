@@ -1,9 +1,7 @@
 #!/bin/bash
 ###############################################################################################################
 # DESC: tool wich grep directory for text files containing search pattern and open files (documentation tool)
-# $Author: chris $
-# $Revision: 1.2 $
-# $RCSfile: vdoc.sh,v $
+# WHO: chris
 ###############################################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
@@ -18,6 +16,7 @@
 ###############################################################################################################
 # 20181209 -> changed default vdoc filename to $TOPIC.txt
 #             convert: find vdoc/ -type f -not -name '*.txt' -exec mv "{}" "{}.txt" \;
+# 20191201 -> rewrite and deduped functions
 
 EDIT=vim
 SCRIPT="$(basename $0)"
@@ -74,7 +73,7 @@ do-search-all(){
 }
 
 do-search(){
-   FILES="$(fgrep -lir $ARG $DOC/ | grep -v "$ARCHIV_DIR" | sort)"
+   FILES="$(fgrep -lir $ARG $DOC/ | grep -v /$ARCHIV_DIR/ | sort)"
    COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
@@ -161,7 +160,6 @@ then
 fi
 
 ### SEARCH WITH ARCHIVE
-echo "$OPT" | egrep -q '^-a'
 if [ $? -eq 0 ]
 then
    do-search-all "$ARG"
@@ -170,9 +168,9 @@ fi
 ### SEARCH NORMAL
 while true
 do
-   if [ -n "$SEARCHED"]
-   then
-      do-search "$ARG"
+   if [ -n "$SEARCHED" ] ;  then
+      echo "$OPT" | egrep -q '^-a' && do-search-all "$ARG" 
+      echo "$OPT" | egrep -q '^-s' && do-search "$ARG" 
    fi
    select-file "$FILES" 
    view-file "$FILE"
