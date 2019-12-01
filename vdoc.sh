@@ -19,114 +19,82 @@
 # 20181209 -> changed default vdoc filename to $TOPIC.txt
 #             convert: find vdoc/ -type f -not -name '*.txt' -exec mv "{}" "{}.txt" \;
 
-DOC="$HOME/vdoc"
-FIND="$*"
 EDIT=vim
+SCRIPT="$(basename $0)"
+ARCHIV_DIR='archiv' # if you move files into this dir, they get ignored unless -a is given
+DOC="$HOME/vdoc"
+
+### CHECK FOR OPTIONS AND ARGS
+echo "$1" | egrep -q '^-'  
+if [ $? -eq 0 ] ; then
+   OPT="$1" 
+   shift 
+   ARG="$*"
+else
+   OPT='-s' 
+   ARG="$*"
+fi
+
 HEAD="#########################################################################################################
-# PROJEKT: $(echo $FIND | cut -d\  -f2)
-# OWNER: $(who | awk '{print $1}' | head -1)
+# PROJEKT: $(echo $ARG | cut -d\  -f2)
+# OWNER: $(logname)
 # VERSION: $(date +%Y%m%d) 
 #########################################################################################################
 DESCRIPTION:
 ------------
 
-NODE NAMES:
------------
-
-HEALTH CHECK:
--------------
-
-IMPORTANT NOTES:
-----------------
+NOTES:
+------------
 "
-
-help()
-{
+### FUNCTIONS #################################################################
+help(){
    echo
    echo "   Usage:"
-   echo "   $(basename $0)    [search pattern]  search project files, archive path excluded"
-   echo "   $(basename $0) -a [search pattern]  search project files, archive path included"
-   echo "   $(basename $0) -l                   list group folders"
-   echo "   $(basename $0) -c [grp/name]        create new project"
+   echo "   $SCRIPT    [search pattern]  search project files, dirs with /$ARCHIV_DIR/ excluded"
+   echo "   $SCRIPT -s [search pattern]  search project files, dirs with /$ARCHIV_DIR/ excluded"
+   echo "   $SCRIPT -a [search pattern]  search project files"
+   echo "   $SCRIPT -l                   list group folders"
+   echo "   $SCRIPT -c [grp/name]        create new project"
    echo
    exit 0
 }
 
-echo "$FIND" | egrep -q '^-h|--help|--usage|^$' && help
-
-echo "$FIND" | egrep -q '^-c'
-if [ "$?" == "0" ]
-then
-   mkdir -p $(dirname $DOC/$(echo $FIND | cut -d" "  -f2))
-   echo "$HEAD" >> $DOC/$(echo $FIND | cut -d" "  -f2).txt
-   $EDIT $DOC/$(echo $FIND | cut -d" "  -f2).txt
-   exit 0
-fi
-
-echo "$FIND" | egrep -q '^-l'
-if [ "$?" == "0" ]
-then
-   echo
-   find "$DOC/" -type d | sed "s#$DOC/#   #g" 
-   echo
-   exit 0
-fi
-
-
-echo "$FIND" | egrep -q '^-a'
-if [ "$?" == "0" ]
-then
-shift
-FIND="$*"
-do-search()
-{
-   SEARCHED=
-   FILES=$(fgrep -lir "$FIND" "$DOC/" | sort)
-   COUNT=$(echo $FILES | wc -w)
-   if [ "$COUNT" == "0" ] 
-   then
+do-search-all(){
+   FILES="$(fgrep -lir $ARG $DOC/ | sort)"
+   COUNT=$(echo "$FILES" | wc -w)
+   if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
       exit 0
-   fi
-   if [ "$COUNT" == "1" ] 
-   then
+   elif [ "$COUNT" == "1" ] ;  then
       SELECT=1
       view-file
       exit 0
    fi
-   SEARCHED=true
+   SEARCHED=1
 }
-else
-do-search()
-{
-   SEARCHED=
-   FILES=$(fgrep -lir "$FIND" "$DOC/" |grep -iv /archiv/ | sort)
-   COUNT=$(echo $FILES | wc -w)
-   if [ "$COUNT" == "0" ] 
-   then
+
+do-search(){
+   FILES="$(fgrep -lir $ARG $DOC/ | grep -v "$ARCHIV_DIR" | sort)"
+   COUNT=$(echo "$FILES" | wc -w)
+   if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
       exit 0
-   fi
-   if [ "$COUNT" == "1" ] 
-   then
+   elif [ "$COUNT" == "1" ] ;  then
       SELECT=1
       view-file
       exit 0
    fi
-   SEARCHED=true
+   SEARCHED=1
 }
-fi
 
-select-file()
-{
+select-file(){
    clear
    echo
    echo "WHICH DOC DO YOU WANT TO SEE ?"
    echo "------------------------------"
-   echo "Search: $FIND"
+   echo "Search: $ARG"
    echo
-   for NR in $(seq 1 $COUNT)
-   do
+   for NR in $(seq 1 $COUNT) ; do
       echo -n "   "
       [ $COUNT -ge 10 ] &&  [ $NR -le 9 ] && echo -n ' '
       echo -n "$NR) " 
@@ -135,10 +103,9 @@ select-file()
    done
    echo "   q) QUIT"
    echo
-   echo -n "Please select (q=quit): "
+   echo -n "Please select: "
    read SELECT
-   if [ "$SELECT" == "q" ] 
-   then
+   if [ "$SELECT" == "q" ] ; then
       exit 0
    fi
 }
@@ -147,33 +114,67 @@ view-file()
 {
    VIEW=true
    echo "$SELECT" | grep -q [0123456789]
-    if [ "$?" == "0" ]
-   then
-   for NR in $(seq 1 $COUNT)
-   do
-      if [ "$SELECT" == "$NR" ]
-      then
-         $NOEDIT $EDIT +"set ic|/$FIND" $(echo $FILES | cut -d' '  -f $SELECT)
-      fi
-   done
+   if [ $? -eq 0 ] ; then
+      for NR in $(seq 1 $COUNT) ; do
+         if [ "$SELECT" == "$NR" ] ; then
+            $EDIT +"set ic|/$ARG" $(echo $FILES | cut -d' '  -f $SELECT)
+         fi
+      done
    fi
 }
 
+create-file(){
+   VDIR="$(dirname $DOC/$ARG)"
+   VFILE="$DOC/$ARG.txt"
+   test -d "$VDIR" || mkdir -p "$VDIR"
+   if [ ! -f "$VFILE" ]
+   then
+      echo "$HEAD" > "$VFILE"
+      $EDIT "$VFILE"
+      exit 0
+   else
+      echo "ERROR, FILE EXISTS: $VFILE"
+      exit 1
+   fi
+}
+
+###############################################################################
+
+### DO HELP
+echo "$OPT" | egrep -q '^-h|^--help|^--usage|^$' && help
+
+### CREATE NEW FILE
+echo "$OPT" | egrep -q '^-c'
+if [ $? -eq 0 ]
+then
+   create-file "$ARG"
+fi
+
+### LIST DIRs
+echo "$OPT" | egrep -q '^-l'
+if [ $? -eq 0 ]
+then
+   echo
+   find "$DOC/" -type d | sed "s#$DOC/#   #g" 
+   echo
+   exit 0
+fi
+
+### SEARCH WITH ARCHIVE
+echo "$OPT" | egrep -q '^-a'
+if [ $? -eq 0 ]
+then
+   do-search-all "$ARG"
+fi
+
+### SEARCH NORMAL
 while true
 do
    if [ -n "$SEARCHED"]
    then
-      do-search
+      do-search "$ARG"
    fi
-   select-file
-   view-file
+   select-file "$FILES" 
+   view-file "$FILE"
 done
 
-################################################################################
-# $Log: vdoc.sh,v $
-# Revision 1.2  2012/06/10 19:18:52  chris
-# auto backup
-#
-# Revision 1.1  2010/01/17 20:40:21  chris
-# Initial revision
-#
