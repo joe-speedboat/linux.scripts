@@ -29,6 +29,10 @@ if [ $? -eq 0 ] ; then
    OPT="$1" 
    shift 
    ARG="$*"
+   echo "$OPT" | egrep -q '^-a' # IF -a, then fake dummy pattern
+   if [ $? -eq 0 ] ; then
+      ARCHIV_DIR='xDontIgnoreArchiveDirsX'
+   fi
 else
    OPT='-s' 
    ARG="$*"
@@ -58,20 +62,6 @@ help(){
    exit 0
 }
 
-do-search-all(){
-   FILES="$(fgrep -lir $ARG $DOC/ | sort)"
-   COUNT=$(echo "$FILES" | wc -w)
-   if [ $COUNT -eq 0 ] ; then
-      echo nothing found ...
-      exit 0
-   elif [ "$COUNT" == "1" ] ;  then
-      SELECT=1
-      view-file
-      exit 0
-   fi
-   SEARCHED=1
-}
-
 do-search(){
    FILES="$(fgrep -lir $ARG $DOC/ | grep -v /$ARCHIV_DIR/ | sort)"
    COUNT=$(echo "$FILES" | wc -w)
@@ -87,7 +77,7 @@ do-search(){
 }
 
 select-file(){
-   clear
+   # clear
    echo
    echo "WHICH DOC DO YOU WANT TO SEE ?"
    echo "------------------------------"
@@ -159,18 +149,11 @@ then
    exit 0
 fi
 
-### SEARCH WITH ARCHIVE
-if [ $? -eq 0 ]
-then
-   do-search-all "$ARG"
-fi
-
 ### SEARCH NORMAL
 while true
 do
-   if [ -n "$SEARCHED" ] ;  then
-      echo "$OPT" | egrep -q '^-a' && do-search-all "$ARG" 
-      echo "$OPT" | egrep -q '^-s' && do-search "$ARG" 
+   if [ "x" == "x$SEARCHED" ] ;  then
+      do-search "$ARG" 
    fi
    select-file "$FILES" 
    view-file "$FILE"
