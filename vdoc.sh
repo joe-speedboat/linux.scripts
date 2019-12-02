@@ -24,18 +24,19 @@ ARCHIV_DIR='archiv' # if you move files into this dir, they get ignored unless -
 DOC="$HOME/vdoc"
 
 ### CHECK FOR OPTIONS AND ARGS
-echo "$1" | egrep -q '^-'  
-if [ $? -eq 0 ] ; then
+echo "$1" | egrep -q '^-' 
+if [ $? -eq 0 ] ; then # search for option
    OPT="$1" 
    shift 
    ARG="$*"
-   echo "$OPT" | egrep -q '^-a' # IF -a, then fake dummy pattern
-   if [ $? -eq 0 ] ; then
+   echo "$OPT" | egrep -q '^-a' 
+   if [ $? -eq 0 ] ; then # if -a, then fake dummy pattern
       ARCHIV_DIR='xDontIgnoreArchiveDirsX'
    fi
-else
+else # if no option is given, we assume it is a search
    OPT='-s' 
    ARG="$*"
+   if [ "x" == "x$ARG" ] ; then OPT='--help' ; fi
 fi
 
 HEAD="#########################################################################################################
@@ -63,7 +64,7 @@ help(){
 }
 
 do-search(){
-   FILES="$(fgrep -lir $ARG $DOC/ | grep -v /$ARCHIV_DIR/ | sort)"
+   FILES="$(fgrep -lir $ARG $DOC/ | grep -v /$ARCHIV_DIR/ | sort )"
    COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
