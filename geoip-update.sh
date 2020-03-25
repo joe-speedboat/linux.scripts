@@ -11,21 +11,25 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
-test -d /srv/geoip || mkdir -p /srv/geoip
-cd /srv/geoip
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+URL=https://dl.miyuru.lk/geoip/maxmind/country/maxmind.dat.gz
+DST=/srv/geoip/GeoIP.dat
 
-rm -f GeoLite2-City.*
-rm -f GeoLite2-Country.*
-wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz
-wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz
-curl http://geolite.maxmind.com/download/geoip/database/GeoLiteCountry/GeoIP.dat.gz | gzip -d - > /srv/geoip/GeoIP.dat
-curl http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz | gzip -d - > GeoLiteCity.dat.gz
-gunzip GeoLite2-City.mmdb.gz
-gunzip GeoLite2-Country.mmdb.gz
-
-strings /srv/geoip/GeoLite2-City.mmdb | tail -20 | grep -q GeoLite || exit 1
-strings /srv/geoip/GeoLite2-Country.mmdb | tail -20 | grep -q GeoLite || exit 1
-strings /srv/geoip/GeoIP.dat | tail -20 | grep -q MaxMind || exit 1
-strings /srv/geoip/GeoLiteCity.dat.gz | tail -20 | grep -q MaxMind || exit 1
-exit 0
+test -d $(dirname $DST) || mkdir -p $(dirname $DST)
+cd $(dirname $DST) || exit 1
+rm -f maxmind.dat*
+wget -q "$URL"
+file $(echo "$URL" | rev | cut -d/ -f1 | rev)  | grep -q 'gzip compressed data'
+gunzip $(echo "$URL" | rev | cut -d/ -f1 | rev)
+strings $(echo "$URL" | rev | cut -d/ -f1 | rev | cut -d. -f-2) | tail -20 | grep -qi geolite
+if [ $? -ne 0 ]
+then
+   echo "Error, could not download $URL"
+   exit 1
+else
+   true
+   # echo "INFO: verified geoip file file :-)"
+fi
+mv -f $(echo "$URL" | rev | cut -d/ -f1 | rev | cut -d. -f-2) $DST
+systemctl restart nginx
 
