@@ -1,6 +1,6 @@
 #!/bin/bash
 #########################################################################################
-# DESC: geoip fore firewalld with ipsets
+# DESC: geoip fence for firewalld with ipsets
 #########################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
