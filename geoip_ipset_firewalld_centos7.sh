@@ -44,12 +44,11 @@ do
 done
 
 echo "WHITELIST IPSET ENTRIES: $(firewall-cmd --permanent --info-ipset=whitelist | grep entries | wc -c)"
-
-
-echo "INFO: drop everything that is not whitelisted with firewalld"
-firewall-cmd --reload
 logger -p cron.notice "IPSet whitelist updated."
-firewall-cmd --permanent --add-rich-rule='rule source not ipset=whitelist drop' 2>&1 | grep -iv warning
+
+
+# echo "INFO: configure firewalld on you needs firewalld"
+# firewall-cmd --permanent --add-rich-rule='rule source ipset=whitelist port port=22 protocol=tcp accept'
 firewall-cmd --reload
 
 exit 0
