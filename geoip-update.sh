@@ -12,12 +12,12 @@
 # http://www.gnu.org/licenses/gpl.txt
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-URL=https://dl.miyuru.lk/geoip/maxmind/country/maxmind.dat.gz
+URL=https://mailfud.org/geoip-legacy/GeoIP.dat.gz
 DST=/srv/geoip/GeoIP.dat
 
-test -d $(dirname $DST) || mkdir -p $(dirname $DST)
-cd $(dirname $DST) || exit 1
-rm -f maxmind.dat*
+test -d $(dirname $DST)/tmp || mkdir -p $(dirname $DST)/tmp
+cd $(dirname $DST)/tmp || exit 1
+rm -f *.dat*
 wget -q "$URL"
 file $(echo "$URL" | rev | cut -d/ -f1 | rev)  | grep -q 'gzip compressed data'
 gunzip $(echo "$URL" | rev | cut -d/ -f1 | rev)
