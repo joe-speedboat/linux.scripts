@@ -17,28 +17,36 @@ rm -rf $TMP
 mkdir -p $TMP
 cd $TMP
 
+echo "INFO: download country ipset lists"
 wget -q http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz 1> /dev/null 2> /dev/null
 tar zxf $TMP/all-zones.tar.gz
 
-ipset destroy whitelist
+echo "INFO: prepare whitelist ipset"
+ipset destroy whitelist 2>/dev/null
 firewall-cmd --permanent --delete-ipset=whitelist 2>/dev/null 
 firewall-cmd --permanent --new-ipset=whitelist --type=hash:net
 firewall-cmd --permanent --get-ipsets | grep -q whitelist || exit 1
 
+echo "INFO: add countries to whitelist ipset collection file"
 for file in ch.* de.* li.* at.* it.* fr.*
 do
  ls $file
  cat $file >> $TMP/all.txt
 done
 
+echo "INFO: read collection file into whitelist ipset"
 firewall-cmd --permanent --ipset=whitelist --add-entries-from-file=$TMP/all.txt
-echo "ENTRIES: $(firewall-cmd --permanent --info-ipset=whitelist | grep entries | wc -c)"
 
-#while read p; do
-#   echo "      exec: firewall-cmd --permanent --ipset=whitelist --add-entry=$p"
-#   firewall-cmd --permanent --ipset=whitelist --add-entry=$p
-#done < $TMP/all.txt
+for sn in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+do
+   echo "INFO: add subnet $sn to whitelist ipset"
+   firewall-cmd --permanent --ipset=whitelist --add-entry=$sn
+done
 
+echo "WHITELIST IPSET ENTRIES: $(firewall-cmd --permanent --info-ipset=whitelist | grep entries | wc -c)"
+
+
+echo "INFO: drop everything that is not whitelisted with firewalld"
 firewall-cmd --reload
 logger -p cron.notice "IPSet whitelist updated."
 firewall-cmd --permanent --add-rich-rule='rule source not ipset=whitelist drop' 2>&1 | grep -iv warning
