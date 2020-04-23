@@ -23,7 +23,7 @@ rm -rf $TMP
 mkdir -p $TMP
 cd $TMP
 
-test -x /etc/ufw/after.init || /etc/ufw/after.init stop
+test -x /etc/ufw/after.init && /etc/ufw/after.init stop
 echo "INFO: prepare $IP_LIST ipset"
 ipset destroy $IP_LIST 2>/dev/null
 # ipset -N $IP_LIST iphash 2>/dev/null
