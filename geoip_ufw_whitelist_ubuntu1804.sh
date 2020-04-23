@@ -107,12 +107,12 @@ set -e
 
 case "\$1" in
 start)
-    iptables -I INPUT -m set ! --match-set $IP_LIST src -j DROP
-    iptables -I INPUT -m set ! --match-set $IP_LIST src -j LOG --log-prefix "[UFW BLOCK $IP_LIST] "
+    iptables -A ufw-before-input -m set ! --match-set $IP_LIST src -j DROP
+    iptables -A ufw-before-input -m set ! --match-set $IP_LIST src -j LOG --log-prefix "[UFW BLOCK $IP_LIST] "
     ;;
 stop)
-    iptables -D INPUT -m set ! --match-set $IP_LIST src -j DROP
-    iptables -D INPUT -m set ! --match-set $IP_LIST src -j LOG --log-prefix "[UFW BLOCK $IP_LIST] "
+    iptables -D ufw-before-input -m set ! --match-set $IP_LIST src -j DROP
+    iptables -D ufw-before-input -m set ! --match-set $IP_LIST src -j LOG --log-prefix "[UFW BLOCK $IP_LIST] "
     ;;
 status)
     # optional
