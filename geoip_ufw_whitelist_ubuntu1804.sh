@@ -73,10 +73,8 @@ echo "# bitbull ubuntu 18.04 ipset whitelist service
 [Unit]
 Description=ipset persistancy service
 DefaultDependencies=no
-Requires=netfilter-persistent.service
 Requires=ufw.service
 Before=network.target
-Before=netfilter-persistent.service
 Before=ufw.service
 ConditionFileNotEmpty=/etc/ipset.$IP_LIST
  
@@ -91,7 +89,6 @@ ExecStop=/sbin/ipset save $IP_LIST -f /etc/ipsets.$IP_LIST
 [Install]
 WantedBy=multi-user.target
  
-RequiredBy=netfilter-persistent.service
 RequiredBy=ufw.service
 " > /etc/systemd/system/ipset-persistent.service
 
