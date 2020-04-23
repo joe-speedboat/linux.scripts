@@ -106,6 +106,8 @@ case "\$1" in
 start)
     iptables -A ufw-before-input -m set ! --match-set $IP_LIST src -j DROP
     iptables -A ufw-before-input -m set ! --match-set $IP_LIST src -j LOG --log-prefix "[UFW BLOCK $IP_LIST] "
+    iptables -D ufw-before-input -j ufw-user-input
+    iptables -A ufw-before-input -j ufw-user-input
     ;;
 stop)
     iptables -D ufw-before-input -m set ! --match-set $IP_LIST src -j DROP
