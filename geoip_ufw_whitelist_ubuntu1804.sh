@@ -127,5 +127,5 @@ EOF
 chmod 755 /etc/ufw/after.init
 /etc/ufw/after.init start
 systemctl enable ufw
-ufw enable 
+ufw --force enable 
 
