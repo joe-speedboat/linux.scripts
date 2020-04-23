@@ -127,5 +127,7 @@ flush-all)
 esac
 EOF
 
+ufw enable 
 chmod 755 /etc/ufw/after.init
 /etc/ufw/after.init start
+
