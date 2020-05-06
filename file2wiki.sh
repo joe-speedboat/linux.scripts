@@ -15,7 +15,7 @@ file2wiki(){
 if [ $# -gt 1 ] ; then
    for f in $*
    do
-      file2wiki $f
+      test -f $f && file2wiki $f
    done
 fi
 
