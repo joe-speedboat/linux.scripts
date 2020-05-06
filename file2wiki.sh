@@ -30,3 +30,5 @@ echo "</pre>
 </div>
 "
 }
+
+file2wiki $*
