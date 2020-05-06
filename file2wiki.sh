@@ -21,7 +21,7 @@ fi
 
 f=$1
 echo "<div class=\"toccolours mw-collapsible mw-collapsed\" style=\"width:60%\">
-File: <b>$1</b>
+File: <b>$1</b>     Modified: <b>$( stat -c '%y' $1 | cut -d. -f1)</b>
 <div class=\"mw-collapsible-content\">
 <pre>"
 cat $1
