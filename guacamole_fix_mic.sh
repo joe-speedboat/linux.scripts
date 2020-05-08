@@ -13,6 +13,10 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
+export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
+
+# make sure system has bootet properly
+sleep 15
 
 # only apply if we have a bug
 rpm -q libguac-client-rdp-1.1.0 >/dev/null
