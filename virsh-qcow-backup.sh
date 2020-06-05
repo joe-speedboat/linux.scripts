@@ -1,8 +1,5 @@
 #!/bin/bash
 # DESC: backup and restore KVM VMs with qcow2 and virsh
-# $Author: chris $
-# $Revision: 1.11 $
-# $RCSfile: virsh-qcow-backup.sh,v $
 
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
@@ -21,7 +18,7 @@ set -o pipefail
 
 #---------- MY VARS --------------------------------------------------
 EXT_CFG=/etc/virsh-qcow-backup.cfg
-BACKUP_DIR=/srv/backup
+BACKUP_DIR=/srv/backup/dev
 DEBUG=0
 DOWARN=1
 MAIL_ERR=1
@@ -33,6 +30,11 @@ BDATE_PATTERN='[0-9]{4}\.[0-9]{2}\.[0-9]{2}\_[0-9]{2}\.[0-9]{2}\.[0-9]{2}'
 SNAPSHOT_ID="qvm-snap"
 BACKUP_ID="qvm-bkp"
 LOGDIR=$BACKUP_DIR
+
+# set defaults
+DOBACKUP=0
+DOBACKUPCOMPRESSED=0
+
 
 #---------- FUNCTIONS --------------------------------------------------
 # log handling
@@ -50,10 +52,11 @@ log(){ #---------------------------------------------------
    fi
    if [ "$LEVEL" = "ERROR" ]
    then
-      if [ $DOBACKUP -eq 1 -a "x" != "x$BACKUPDEST" ] ; then
+      if [ $DOBACKUP -eq 1 -o $DOBACKUPCOMPRESSED -eq 1 -a "x" != "x$BACKUPDEST" ] ; then
          test -d $BACKUPDEST && mv $BACKUPDEST $BACKUPDEST_FINAL.failed
       fi
-      [ $MAIL_ERR -eq 1 ] && ( cat $BACKUPDEST_FINAL.failed/$(basename $0).log | mail -s "ERROR: $(basename $0) VM=$VM" $TO )
+      
+      [ $MAIL_ERR -eq 1 ] && ( ( echo ; cat $BACKUPDEST_FINAL.failed/$(basename $0).log 2>/dev/null ) | mail -s "ERROR: $(basename $0) VM=$VM" $TO )
       kill $TOP_PID
       kill -9 $TOP_PID
    fi
@@ -92,7 +95,8 @@ createlock(){ #--------------------------------------------
 dohelp(){ #------------------------------------------------
    echo "
    Usage: $(basename $0)
-           -bc <VM>          Backup VM (ext snap)
+           -b <VM>          Backup VM without compression
+           -bc <VM>         Backup VM with compression
            -br <DIR>         Restore VM (only full vm restore)
            -be <DISK1,DISK2> Exclude this disks while backup
            -bg <NR>          Keep only NR of most recent backup
@@ -106,7 +110,7 @@ dohelp(){ #------------------------------------------------
            -l  [VM]          List VM information of one or all VMs
            -h|--help         Show this help
 
-           eg: $(basename $0) -bg 5 -bc nfs -be nfs_srv.qcow2
+           eg: $(basename $0) -bg 5 -bcc nfs -be nfs_srv.qcow2
    "
 exit 0
 }
@@ -161,6 +165,10 @@ dorestore(){ #---------------------------------------------
       if [ -r $qname.lzo ] ; then
          log info restoring compressed disk $PWD/$qname.lzo to $qpath/$qname
          lzop -dc $qname.lzo > $qpath/$qname || log error could not restore $PWD/$qname.lzo to $qpath/$qname
+         log info disk $qpath/$qname restored
+      elif [ -r $qname ] ; then
+         log info restoring disk $PWD/$qname to $qpath/$qname
+         cp $qname $qpath/$qname || log error could not restore $PWD/$qname to $qpath/$qname
          log info disk $qpath/$qname restored
       else
          log warning qcow2 disk backup $PWD/$qname.lzo does not exist, probaly it was excluded in backup, create empty disk instead
@@ -236,8 +244,96 @@ listvm(){ #---------------------------------------------
    echo
 }
 
-# backup VM
+# backup VM with no compression
 dobackup(){ #----------------------------------------------
+   VM=$1
+   BACKUPDEST_FINAL=$2
+   DISK_EXCLUDES="$3"
+   log debug "-------------------- doing all the exclude stuff --------------------"
+   if [ "x" = "x$DISK_EXCLUDES" ] ; then
+      log debug no disks excluded, setting dummy pattern: $DISK_EXCLUDES_GREP
+      DISK_EXCLUDES_GREP='_backup_all_disks_and_exclude_none_'
+   else
+      DISK_EXCLUDES_GREP="$(echo $DISK_EXCLUDES | sed 's#,#\$|#g;s#$#\$#g')"
+   fi
+   log debug DISK_EXCLUDES_GREP=$DISK_EXCLUDES_GREP
+   [ "x$VM" = "x" ] && log error var VM is empty
+   [ "x$BACKUPDEST_FINAL" = "x" ] && log error var BACKUPDEST_FINAL is empty
+   BACKUPDEST=$BACKUPDEST_FINAL.running
+   LOGDIR=$BACKUPDEST
+   log info starting backup of VM=$VM to BACKUPDEST=$BACKUPDEST
+   log debug create backup destination dir $BACKUPDEST
+   test -d $BACKUPDEST || mkdir -p $BACKUPDEST
+   log debug list all disks which are excluded
+   for DISK in $( virsh domblklist $VM | sed '1,2d;/^$/d;s|.* /|/|g' ) ; do
+      echo $DISK | egrep -q "$DISK_EXCLUDES_GREP"
+      if [ $? -eq 0 ] ; then 
+         log warning "DISK=$DISK is excluded for backup by user"
+         log debug storing disk name and size, will create empty one on restore
+         test -f $BACKUPDEST/$VM.disklist || echo "type;size;name;path" >> $BACKUPDEST/$VM.disklist
+         qsize="$(qemu-img info -U $DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         qname="$(basename $DISK)"
+         qpath="$(dirname $DISK)"
+         echo "qcow2;$qsize;$qname;$qpath" >> $BACKUPDEST/$VM.disklist
+      else
+         qemu-img info -U $DISK | grep -q 'file format: qcow2'
+         if [ $? -ne 0 ] ; then # found disk other than qcow2
+            log warning DISK=$DISK is not qcow2, so I add this disk to exclude list
+            DISK_EXCLUDES_GREP="$DISK_EXCLUDES_GREP|$DISK\$"
+            log debug "DISK_EXCLUDES_GREP=$DISK_EXCLUDES_GREP"
+         fi
+      fi
+   done
+   log debug "-------------------- starting backup part --------------------"
+   log info backup VM definition
+   virsh dumpxml --inactive $VM > $BACKUPDEST/$VM.xml 2>>$LOGDIR/$(basename $0).log || log error backup VM=$VM definition failed
+   log info create snapshot
+   virsh snapshot-create-as --domain $VM $BACKUP_ID --disk-only --atomic >>$LOGDIR/$(basename $0).log 2>&1 || log error could not create VM=$VM snapshot
+   log debug snapshot created
+   for DISK in $( virsh domblklist $VM | sed '1,2d;/^$/d;s|.* /|/|g' | egrep -v "$DISK_EXCLUDES_GREP" )
+   do
+      VM_IDISK=$(virsh domblklist $VM | grep $DISK | awk '{print $1}') # vm internal disk name
+      VM_SNAP=$DISK
+      VM_DISK=$(qemu-img info -U $VM_SNAP | grep 'backing file:' | awk '{print $3}') # vm main disk file
+      echo $VM_DISK | egrep -q "$DISK_EXCLUDES_GREP"
+      if [ $? -eq 0 ] ; then # found excluded disk
+         log info found exlcuded disk, skip it: $VM_DISK
+      else
+         test -f $BACKUPDEST/$VM.disklist || echo "type;size;name;path" >> $BACKUPDEST/$VM.disklist
+         qsize="$(qemu-img info -U $VM_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         qname="$(basename $VM_DISK)"
+         qpath="$(dirname $VM_DISK)"
+         echo "qcow2;$qsize;$qname;$qpath" >> $BACKUPDEST/$VM.disklist
+         log info backup external snapshot from qcow2 file $VM_DISK to $BACKUPDEST/$qname
+         cp $VM_DISK $BACKUPDEST/$qname || log error could not backup qcow2 image $VM_DISK
+      fi
+      VMRUN=0 ; virsh -q list | awk '{print $2}' | egrep -q "^$VM$" && VMRUN=1
+      if [ $VMRUN -ne 0 ] ; then # vm is running
+         log info blockcommit snapshot $VM_SNAP into original disk $VM_DISK
+         virsh blockcommit $VM $VM_IDISK --active --pivot --verbose >>$LOGDIR/$(basename $0).log 2>&1 || log error could not blockcommit snapshot $VM_SNAP
+      else
+         log info VM is not running, no blockcommit needed
+      fi
+      log info deleting snapshot file $VM_SNAP
+      rm -f $VM_SNAP || log error could not delete snapshot file $VM_SNAP
+   done
+   log info remove snapshot $BACKUP_ID 
+   virsh snapshot-delete $VM $BACKUP_ID --metadata >>$LOGDIR/$(basename $0).log 2>&1 || log error could not delete VM=$VM snapshot
+   VMRUN=0 ; virsh -q list | awk '{print $2}' | egrep -q "^$VM$" && VMRUN=1
+   if [ $VMRUN -eq 0 ] ; then # vm is not running
+      # because blockcommit is not possible with offline VMs
+      virsh undefine $VM
+      virsh define $BACKUPDEST/$VM.xml
+   fi
+   log info backup finished successfully VM=$VM
+   log info move finished backup to final destination: $BACKUPDEST_FINAL
+   mv $BACKUPDEST $BACKUPDEST_FINAL || log error could not move backup
+   BACKUPDEST=$BACKUPDEST_FINAL # from now, log into this dir
+   LOGDIR=$BACKUPDEST
+}
+
+# backup VM with compression
+dobackupcompressed(){ #----------------------------------------------
    VM=$1
    BACKUPDEST_FINAL=$2
    DISK_EXCLUDES="$3"
@@ -323,6 +419,7 @@ dobackup(){ #----------------------------------------------
    BACKUPDEST=$BACKUPDEST_FINAL # from now, log into this dir
    LOGDIR=$BACKUPDEST
 }
+
 
 # cleanup failed backups
 docleanupbackup(){ #----------------------------------------------
@@ -455,8 +552,15 @@ KEEPGEN=0
 while [ $# -gt 0 ] ; do
    ARG=$1
    case $ARG in
-      -bc) # backup vm
+      -b) # backup vm
          DOBACKUP=1
+         shift
+         VM=$1
+         virsh -q list --all | awk '{print $2}' | grep -q "^$VM$" || dohelp
+         shift
+         ;;
+      -bc) # backup vm and compress
+         DOBACKUPCOMPRESSED=1
          shift
          VM=$1
          virsh -q list --all | awk '{print $2}' | grep -q "^$VM$" || dohelp
@@ -548,7 +652,7 @@ while [ $# -gt 0 ] ; do
 done
 
 # only allow one operation at the same time
-[ $(( $DOBACKUP + $DOCLEANUPBACKUP + $DORESTORE + $DODELETE + $DOSNAPSHOT + $REMOVESNAPSHOT + $MERGESNAPSHOT + $LISTSNAPSHOT + $DOLISTVMS )) -gt 1 ] && dohelp
+[ $(( $DOBACKUP + $DOBACKUPCOMPRESSED + $DOCLEANUPBACKUP + $DORESTORE + $DODELETE + $DOSNAPSHOT + $REMOVESNAPSHOT + $MERGESNAPSHOT + $LISTSNAPSHOT + $DOLISTVMS )) -gt 1 ] && dohelp
 
 # ---------- DO THE WORK NOW -------------------------------------------------
 
@@ -561,6 +665,12 @@ done
 if [ $DOBACKUP -eq 1 ] ; then
    createlock "/var/run/$(basename $0).lck"
    dobackup "$VM" "$BACKUP_DIR/$VM/$BDATE" "$DISK_EXCLUDES"
+   if [ $KEEPGEN -gt 0 ] ; then
+      dorotate "$BACKUP_DIR/$VM" "$BDATE_PATTERN" "$KEEPGEN"
+   fi
+elif [ $DOBACKUPCOMPRESSED -eq 1 ] ; then
+   createlock "/var/run/$(basename $0).lck"
+   dobackupcompressed "$VM" "$BACKUP_DIR/$VM/$BDATE" "$DISK_EXCLUDES"
    if [ $KEEPGEN -gt 0 ] ; then
       dorotate "$BACKUP_DIR/$VM" "$BDATE_PATTERN" "$KEEPGEN"
    fi
@@ -597,40 +707,3 @@ fi
 
 rm -f "$LCK_FILE"
 ################################################################################
-# $Log: virsh-qcow-backup.sh,v $
-# Revision 1.11  2017/10/06 04:40:48  chris
-# resume vm after snapshot restauration
-#
-# Revision 1.10  2015/09/27 17:39:25  chris
-# refreshing pool after each backup repair to keep vols in sync
-#
-# Revision 1.9  2015/09/14 08:19:17  chris
-# cleaned up error handing by log function, big mess :-(
-#
-# Revision 1.8  2015/09/14 05:16:59  chris
-# bugfix: exclude list broken
-#
-# Revision 1.7  2015/09/13 09:33:05  chris
-# optimized disk handling:
-#   -non qcow disks are now allowed in VMs
-#   -backup does ignore non qcow2 disks because it can not snapshot it
-#
-# Revision 1.6  2015/09/09 15:10:35  chris
-# optimized external config file into var
-#
-# Revision 1.5  2015/08/13 10:28:52  chris
-# do only lock the script when touching VMs
-#
-# Revision 1.4  2015/07/09 06:40:07  chris
-# bugfix, now blockcommit also on excluded disks
-#
-# Revision 1.3  2015/07/03 14:23:55  chris
-# snapshots from backups where listed, now hidden
-# mail on error function added
-#
-# Revision 1.2  2015/07/01 12:30:03  chris
-# backup with multiple disks on VM was not possible, fixed now
-#
-# Revision 1.1  2015/06/29 18:48:53  chris
-# Initial revision
-#
