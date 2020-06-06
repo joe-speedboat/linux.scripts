@@ -325,7 +325,7 @@ dobackup(){ #----------------------------------------------
       virsh undefine $VM
       virsh define $BACKUPDEST/$VM.xml
    fi
-   log info backup finished successfully VM=$VM
+   log info backup finished successfully
    log info move finished backup to final destination: $BACKUPDEST_FINAL
    mv $BACKUPDEST $BACKUPDEST_FINAL || log error could not move backup
    BACKUPDEST=$BACKUPDEST_FINAL # from now, log into this dir
