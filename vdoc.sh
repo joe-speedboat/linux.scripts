@@ -89,7 +89,7 @@ select-file(){
       [ $COUNT -ge 10 ] && [ $NR -le 9 ] && echo -n ' '
       echo -n "$NR) " 
       FILE="$(echo $FILES | cut -d\  -f$NR)"
-      echo -n "$FILE" | sed "s#$DOC/##g;s/.txt$/ /"
+      echo -n "$FILE" | sed "s#$DOC/##g;s/.txt$/    /"
       echo $( stat "$FILE" | grep ^Modify | awk '{print $2}' )
       NR=$(( $NR + 1 ))
    done
