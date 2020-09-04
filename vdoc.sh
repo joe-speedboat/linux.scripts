@@ -83,7 +83,7 @@ select-file(){
    echo "WHICH DOC DO YOU WANT TO SEE ?"
    echo "------------------------------"
    echo "Search: $ARG"
-   echo
+   ( echo
    for NR in $(seq 1 $COUNT) ; do
       echo -n "   "
       [ $COUNT -ge 10 ] && [ $NR -le 9 ] && echo -n ' '
@@ -93,7 +93,7 @@ select-file(){
       echo $( stat "$FILE" | grep ^Modify | awk '{print $2}' )
       NR=$(( $NR + 1 ))
    done
-   echo "   q) QUIT"
+   echo "   q) QUIT" ) | column -t | sed 's/^/   /'
    echo
    echo -n "Please select: "
    read SELECT
