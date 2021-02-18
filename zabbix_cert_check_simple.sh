@@ -32,7 +32,7 @@ fi
 
 line=$(curl -kvv --max-time 5 https://$host 2>&1 | egrep 'issuer:|expire date:|start date:|subject:' | sed 's/.*: //' | tr -d ',' | tr '\n' ',')
 issuer=$(echo $line | cut -d, -f4 | tr -d ';')
-subject=$(echo $line | cut -d, -f1 | tr -d ';')
+subject=$(echo $line | cut -d, -f1 | tr -d ';' | sed 's/.*CN=/CN=/')
 start=$(echo $line | cut -d, -f2)
 expire=$(echo $line | cut -d, -f3)
 end_date_seconds=`date '+%s' --date "$expire"`
