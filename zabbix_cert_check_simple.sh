@@ -30,8 +30,7 @@ then
     port=443
 fi
 
-
-line=$(curl -kvv --max-time 2 https://$host 2>&1 | egrep 'issuer:|expire date:|start date:|subject:' | sed 's/.*: //' | tr '\n' ',')
+line=$(curl -kvv --max-time 5 https://$host 2>&1 | egrep 'issuer:|expire date:|start date:|subject:' | sed 's/.*: //' | tr -d ',' | tr '\n' ',')
 issuer=$(echo $line | cut -d, -f4 | tr -d ';')
 subject=$(echo $line | cut -d, -f1 | tr -d ';')
 start=$(echo $line | cut -d, -f2)
