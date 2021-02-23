@@ -26,30 +26,37 @@ ogate.office.bitbull.ch
 '
 
 
-echo "IP,DNS,ISSUER,SUBJECT,START,EXPIRE,DAYS"
+echo "IP,PORT,DNS,ISSUER,SUBJECT,START,EXPIRE,DAYS"
 for range in $IP_RANGES
 do 
    bash -c "echo $range" | tr ' ' '\n' | while read host
    do
-      line=$(curl -kvv --max-time $WAIT_SEC https://$host 2>&1 | egrep 'issuer:|expire date:|start date:|subject:' | sed 's/.*: //' | tr -d ',' | tr '\n' ',')
-      issuer=$(echo $line | cut -d, -f4 | tr -d ';')
-      subject=$(echo $line | cut -d, -f1 | tr -d ';' | sed 's/.*CN=/CN=/')
-      start=$(echo $line | cut -d, -f2)
-      expire=$(echo $line | cut -d, -f3)
-      end_date_seconds=`date '+%s' --date "$expire"`
-      now_seconds=`date '+%s'`
-      end_days=$(echo "($end_date_seconds-$now_seconds)/24/3600" | bc)
-      echo $host | egrep -q '[a-zA-Z]'
-      if [ $? -eq 0 ] ; then
-         dns=$host
-         ip=$(host $dns | sed 's/.* //' | grep '\.')
-      else
-        dns=$(host $host | sed 's/.* //' | grep '\.')
-        ip=$host
-      fi
-      if [ "x$expire" != "x" ] ; then
-         echo $ip,$dns,$issuer,$subject,$start,$expire,$end_days
-      fi
+      for port in $PORTS
+      do
+         line=$(curl -kvv --max-time $WAIT_SEC https://$host:$port 2>&1 |\
+            cat -v |\
+            egrep 'issuer:|expire date:|start date:|subject:' |\
+            sed 's/.*: //' |\ 
+            tr -d ',' |\
+            tr '\n' ',')
+         issuer=$(echo $line | cut -d, -f4 | tr -d ';' | sed 's/.*CN=/CN=/' | cut -d' ' -f1)
+         subject=$(echo $line | cut -d, -f1 | tr -d ';' | sed 's/.*CN=/CN=/' | cut -d' ' -f1)
+         start=$(echo $line | cut -d, -f2)
+         expire=$(echo $line | cut -d, -f3)
+         end_date_seconds=`date '+%s' --date "$expire"`
+         now_seconds=`date '+%s'`
+         end_days=$(echo "($end_date_seconds-$now_seconds)/24/3600" | bc)
+         echo $host | egrep -q '[a-zA-Z]'
+         if [ $? -eq 0 ] ; then
+            dns=$host
+            ip=$(host $dns | sed 's/.* //' | grep '\.')
+         else
+           dns=$(host $host | sed 's/.* //' | grep '\.')
+           ip=$host
+         fi
+         if [ "x$expire" != "x" ] ; then
+            echo $ip,$port,$dns,$issuer,$subject,$start,$expire,$end_days
+         fi
+      done
    done
-
 done 
