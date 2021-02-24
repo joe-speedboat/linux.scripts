@@ -12,34 +12,29 @@
 # http://www.gnu.org/licenses/gpl.txt
 
 # write results to
-CSV=/tmp/cert_csv_report.csv
+CSV=$HOME/"$(date '+%Y%m%d%H%M' )_ssl_cert_scanner.csv"
 
 # ports to try
 PORTS="443 50443 8443"
 
-WAIT_SEC=2
+WAIT_SEC=1
 
 IP_RANGES='
-ogate.office.bitbull.ch
-192.168.223.{40..254}
-192.168.123.{1..254}
+10.0.91.5
+www.domain.local
+share.domain.local
+10.0.{91,2,12}.{1..254}
 '
 
-
-echo "IP,PORT,DNS,ISSUER,SUBJECT,START,EXPIRE,DAYS"
+echo "IP,PORT,DNS,ISSUER,SUBJECT,START,EXPIRE,DAYS" | tee -a $CSV
 for range in $IP_RANGES
 do 
    bash -c "echo $range" | tr ' ' '\n' | while read host
    do
       for port in $PORTS
       do
-         line=$(curl -kvv --max-time $WAIT_SEC https://$host:$port 2>&1 |\
-            cat -v |\
-            egrep 'issuer:|expire date:|start date:|subject:' |\
-            sed 's/.*: //' |\ 
-            tr -d ',' |\
-            tr '\n' ',')
-         issuer=$(echo $line | cut -d, -f4 | tr -d ';' | sed 's/.*CN=/CN=/' | cut -d' ' -f1)
+         line=$(curl -kvv --max-time $WAIT_SEC https://$host:$port 2>&1 | cat -v | egrep 'issuer:|expire date:|start date:|subject:' | sed 's/.*: //' | tr -d ',' | tr '\n' ',')
+         issuer=$(echo $line | cut -d, -f4 | sed 's/.*O=/O=/' | cut -d';' -f1 | tr -d ';')
          subject=$(echo $line | cut -d, -f1 | tr -d ';' | sed 's/.*CN=/CN=/' | cut -d' ' -f1)
          start=$(echo $line | cut -d, -f2)
          expire=$(echo $line | cut -d, -f3)
@@ -49,14 +44,15 @@ do
          echo $host | egrep -q '[a-zA-Z]'
          if [ $? -eq 0 ] ; then
             dns=$host
-            ip=$(host $dns | sed 's/.* //' | grep '\.')
+            ip=$(host $dns | grep 'has address' | head -1 | sed 's/.* //' | grep '\.')
          else
-           dns=$(host $host | sed 's/.* //' | grep '\.')
+           dns=$(host $host | head -1 | sed 's/.* //' | grep '\.')
            ip=$host
          fi
          if [ "x$expire" != "x" ] ; then
-            echo $ip,$port,$dns,$issuer,$subject,$start,$expire,$end_days
+            echo $ip,$port,$dns,$issuer,$subject,$start,$expire,$end_days | tee -a $CSV
          fi
       done
    done
 done 
+
