@@ -229,14 +229,14 @@ listvm(){ #---------------------------------------------
    virsh domiflist $VM | sed -r '/---/d;s/\s+/,/g;/^$/d' | column -s, -t | sed 's/^/      /g'
    echo "      ---------- Block Devices:"
    ( echo "Target,Source,Size"
-   virsh domblklist $VM | sed -r '1,/----/d;/^$/d;s/\s+/,/g' | while read VMDISK
+   virsh domblklist $VM | sed -r '1,/----/d;s/^[ \t]*//;/^$/d;s/\s+/,/g' | while read VMDISK
    do
       VM_DISK=$(echo $VMDISK |  cut -d, -f1)
       LOCAL_DISK=$(echo $VMDISK |  cut -d, -f2)
       test -f $LOCAL_DISK 
       if [ $? -eq 0 ] ; then
          DISK_SIZE="$(du -mh $LOCAL_DISK | awk '{print $1}')"
-         DISK_SIZE="$DISK_SIZE,$(qemu-img info -U $LOCAL_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1}')"
+         DISK_SIZE="$DISK_SIZE,$(qemu-img info -U $LOCAL_DISK | grep 'virtual size' | cut -d: -f2 | awk '{print $1$2}')"
       fi
       echo "$VM_DISK,$LOCAL_DISK,$DISK_SIZE"
       DISK_SIZE=
