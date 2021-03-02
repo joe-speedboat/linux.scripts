@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
-    <version>5.0</version>
-    <date>2021-02-17T16:02:21Z</date>
+    <version>5.2</version>
+    <date>2021-03-02T10:18:38Z</date>
     <groups>
         <group>
             <name>SSL Cert vHosts</name>
@@ -19,6 +19,9 @@
             <applications>
                 <application>
                     <name>SSL certificate</name>
+                </application>
+                <application>
+                    <name>SSL certificate View</name>
                 </application>
             </applications>
             <items>
@@ -43,13 +46,16 @@
                     <name>SSL certificate validity</name>
                     <type>EXTERNAL</type>
                     <key>zabbix_cert_check_simple.sh[-d,{HOST.DNS},{$SSL_PORT}]</key>
-                    <delay>6h</delay>
-                    <history>30d</history>
+                    <delay>1h</delay>
+                    <history>365d</history>
                     <value_type>FLOAT</value_type>
                     <units>days</units>
                     <applications>
                         <application>
                             <name>SSL certificate</name>
+                        </application>
+                        <application>
+                            <name>SSL certificate View</name>
                         </application>
                     </applications>
                     <triggers>
@@ -92,7 +98,8 @@
                     <name>SSL certificate Issuer</name>
                     <type>EXTERNAL</type>
                     <key>zabbix_cert_check_simple.sh[-i,{HOST.DNS},{$SSL_PORT}]</key>
-                    <delay>6h</delay>
+                    <delay>1h</delay>
+                    <history>365d</history>
                     <trends>0</trends>
                     <value_type>TEXT</value_type>
                     <applications>
@@ -105,7 +112,8 @@
                     <name>SSL certificate Subject</name>
                     <type>EXTERNAL</type>
                     <key>zabbix_cert_check_simple.sh[-s,{HOST.DNS},{$SSL_PORT}]</key>
-                    <delay>6h</delay>
+                    <delay>1h</delay>
+                    <history>365d</history>
                     <trends>0</trends>
                     <value_type>TEXT</value_type>
                     <applications>
