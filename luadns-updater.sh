@@ -53,6 +53,13 @@ fi
 [ "x$DynDnsARecord" == "x" ] && ( DynDnsARecord="$1" ; logit "got DynDnsARecord as arg1" )
 [ "x$WanIp == "x" ] && ( WanIp="$2" ; logit "got WanIp as arg2" )
 
+if [[ "x$WanIp == "x" || "x$DynDnsARecord" == "x" ]]
+then
+   logit error WanIp and DynDnsARecord missing
+   echo "ERROR: WanIp and DynDnsARecord missing"
+   exit 1
+fi
+
 logit LuaNs=$LuaNs
 logit DynDnsARecord=$DynDnsARecord
 logit WanIp=$WanIp
