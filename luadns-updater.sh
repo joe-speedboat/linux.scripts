@@ -27,11 +27,12 @@ logit(){
 }
 
 # PRE REQ CHECKS  #######################################################################
-which curl >/dev/null 2>&1 || (logit curl is not installed, please install first ; exit 1)
+which curl >/dev/null 2>&1 || (logit "curl is not installed, please install first" ; exit 1)
 which host >/dev/null 2>&1 || (logit "host is not installed, please install first (dns-utils or bind-untils)" ; exit 1)
 
 #########################################################################################
-LuaKey="4ceb50f2atgaddsffvcs1dfghy3456720"
+CFG="/etc/$(basename $0).cfg"
+LuaKey="4ceb...........56720"
 LuaEmail="lua@bitbull.ch"
 LuaApi="https://api.luadns.com/v1"
 DynDnsARecord="web1.bitbull.ch"
@@ -40,6 +41,18 @@ DynDnsDomain=`echo $DynDnsARecord | cut -d. -f2-`
 LuaNs=`host -t NS $DynDnsDomain | grep 'name server' | head -1 | sed 's/.* name server //'`
 WanIp=`wget -q -O - ip.changeip.com | grep ^[0-9]`
 DnsRecIp=`host -t A $DynDnsARecord $LuaNs | grep 'has address' | head -1 | sed 's/.* has address //'`
+
+test -r "$CFG"
+if [ $? -eq 0 ]
+then
+   source "$CFG"
+   logit "found and sourced config file: $CFG"
+fi
+
+# if you empty out the vars DynDnsARecord and WanIp above, they will get fetched as args
+[ "x$DynDnsARecord" == "x" ] && ( DynDnsARecord="$1" ; logit "got DynDnsARecord as arg1" )
+[ "x$WanIp == "x" ] && ( WanIp="$2" ; logit "got WanIp as arg2" )
+
 logit LuaNs=$LuaNs
 logit DynDnsARecord=$DynDnsARecord
 logit WanIp=$WanIp
