@@ -37,28 +37,23 @@ LuaEmail="lua@bitbull.ch"
 LuaApi="https://api.luadns.com/v1"
 DynDnsARecord="web1.bitbull.ch"
 DynDnsTtl=300
-DynDnsDomain=`echo $DynDnsARecord | cut -d. -f2-`
-LuaNs=`host -t NS $DynDnsDomain | grep 'name server' | head -1 | sed 's/.* name server //'`
-WanIp=`wget -q -O - ip.changeip.com | grep ^[0-9]`
-DnsRecIp=`host -t A $DynDnsARecord $LuaNs | grep 'has address' | head -1 | sed 's/.* has address //'`
 
-test -r "$CFG"
-if [ $? -eq 0 ]
-then
-   source "$CFG"
-   logit "found and sourced config file: $CFG"
-fi
+test -r "$CFG" && (source $CFG ; logit "found and sourced config file: $CFG" )
 
 # if you empty out the vars DynDnsARecord and WanIp above, they will get fetched as args
-[ "x$DynDnsARecord" == "x" ] && ( DynDnsARecord="$1" ; logit "got DynDnsARecord as arg1" )
-[ "x$WanIp == "x" ] && ( WanIp="$2" ; logit "got WanIp as arg2" )
+[ "x$DynDnsARecord" == "x" ] && ( DynDnsARecord="$1" ; logit "try reading DynDnsARecord as arg1" )
+[ "x$WanIp" == "x" ] && ( WanIp="$2" ; logit "try reading WanIp as arg2" )
 
-if [[ "x$WanIp == "x" || "x$DynDnsARecord" == "x" ]]
+if [[ "x$WanIp" != "x" && "x$DynDnsARecord" != "x" ]]
 then
    logit error WanIp and DynDnsARecord missing
    echo "ERROR: WanIp and DynDnsARecord missing"
    exit 1
 fi
+
+LuaNs=`host -t NS $DynDnsDomain | grep 'name server' | head -1 | sed 's/.* name server //'`
+DynDnsDomain=`echo $DynDnsARecord | cut -d. -f2-`
+DnsRecIp=`host -t A $DynDnsARecord $LuaNs | grep 'has address' | head -1 | sed 's/.* has address //'`
 
 logit LuaNs=$LuaNs
 logit DynDnsARecord=$DynDnsARecord
