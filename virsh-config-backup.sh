@@ -15,7 +15,7 @@
 
 ########## GLOBAL VARIABLES ####################################################
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-BDIR=/srv/vm/config/$(uname -n)
+BDIR=/srv/backup/virsh-config/$(uname -n)
 
 
 ########## MAIN SCRIPT GOES HERE

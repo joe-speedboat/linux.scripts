@@ -14,6 +14,9 @@
 # USEAGE: start this script as root
 #         $ nc_share_audit.sh 
 
+#NOTES:
+# mysql nextcloud -e 'select id, share_with, password, uid_owner, uid_initiator, item_type, file_target, permissions, FROM_UNIXTIME(stime), expiration, mail_send, note, hide_download from oc_share where id = '42' \G' | sed 's/\*\*\*.*/---------/'
+
 OCC='sudo -u nginx /srv/nextcloud/html/occ'
 
 SED_PERM='
