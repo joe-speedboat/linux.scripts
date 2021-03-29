@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 DISK=vda
 if [ $(lsblk | grep ^vda | awk '{print $4}' ) != $(df -hP / | grep /dev/$DISK | awk '{print $2}') ]
 then
