@@ -64,6 +64,12 @@ do
    virsh iface-dumpxml $IFACE > $IFACE.xml
 done
 
+test -d etc && rm -fr etc
+mkdir etc
+cp -a /etc/qemu-kvm etc/
+cp -a /etc/libvirt etc/
+test -f /etc/ksmtuned.conf && cp -a /etc/ksmtuned.conf etc/
+
 
 ################################################################################
 # $Log: virsh-config-backup.sh,v $
