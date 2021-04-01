@@ -41,23 +41,24 @@ do
 done
 
 # ---------- MAIN PROGRAM ---------------------------------
-
-log info CPU BENCHMARK - higher is better ------------------
+log info BENCHMARK STARTED ------------------------------------------
+log info CPU BENCHMARK - higher is better ---------------------------
 sysbench cpu --cpu-max-prime=100000 --num-threads=1 run | grep 'events per second:' | log info
 
 log info THREAD SCHEDULING BENCHMARK - higher is better ---
 sysbench threads --threads=64 --thread-yields=100 --thread-locks=2 run | grep 'total number of events:' | log info
 
-log info MUTEX BENCHMARK - lower is better ----------------
+log info MUTEX BENCHMARK - lower is better --------------------------
 sysbench mutex --mutex-num=100000 --mutex-locks=100000 --mutex-loops=100000 run | grep 'total time:' | log info
 
-log info MEMORY BENCHMARK - higher is better ---------------
+log info MEMORY BENCHMARK - higher is better ------------------------
 sysbench memory --memory-block-size=1K --memory-total-size=100G --num-threads=1 run | sed '/ transferred /!d;s/.* transferred /Bandwith: /;s/[\(\)]//g' | log info
 
-log info FILE-IO BENCHMARK - higher is better ----------------
+log info FILE-IO BENCHMARK - higher is better -----------------------
 FIO='sysbench fileio --file-fsync-all --num-threads=16 --file-total-size=3G --file-test-mode=rndrw'
 cd /
 $FIO prepare >/dev/null
 $FIO run | awk '/File operations:/,/General statistics:/' | head -n -2 | log info
 $FIO cleanup >/dev/null
+log info BENCHMARK FINISHED -----------------------------------------
 
