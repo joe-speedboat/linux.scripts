@@ -39,7 +39,7 @@
 # custom vars ---------------
 CLOUD=cloud.domain.com
 USR="chris"
-PW="jRmkt-xxx-2YBQk"
+PW="8M8BG-xxx-4jWHR"
 TEST_BLOCK_SIZE_MB=150
 TEST_FILES_COUNT=100
 BENCH_DIR="bench"
@@ -141,13 +141,13 @@ $CURL  -T "$LOCAL_LOG_FILE" "$DAV_REMOTE_BENCH_DIR/"
 echo "cleaning up test files"
 echo "   delete directory: $BENCH_DIR/small_files"
 $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
-echo "   delete directory: $BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb"
+echo "   delete file: $BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb"
 $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
 sleep 5
-$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-Z0-9]' | while read TRASH_FILE_TO_DELETE
+$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-Z0-9]' | egrep "^small_files|^$TEST_BLOCK_SIZE_MB.mb" | while read TRASH_FILE_TO_DELETE
 do
   $CURL -X DELETE "$DAV_TRASH_URL/$TRASH_FILE_TO_DELETE"
-  echo "   delete trash file: ${TRASH_FILE_TO_DELETE}"
+  echo "   delete trash object: ${TRASH_FILE_TO_DELETE}"
 done
 echo done
 
