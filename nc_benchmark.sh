@@ -44,6 +44,7 @@ TEST_BLOCK_SIZE_MB=150
 TEST_FILES_COUNT=100
 BENCH_DIR="bench"
 # ---------------------------
+
 cd $(dirname $0)
 
 if [ -r "$(basename $0).conf" ]
@@ -63,7 +64,7 @@ DAV_REMOTE_BENCH_DIR="$DAV_FILE_URL/$BENCH_DIR"
 LOCAL_DIR="$HOME/.nc/$CLOUD"
 LOCAL_LOG_FILE="$LOCAL_DIR/$(basename $0).txt"
 CURL="curl -k -s -u$USR:$PW"
-UL_BLOCK_ASSEMBLING_MAX_WAIT=180
+UL_BLOCK_ASSEMBLING_MAX_WAIT=1200
 
 # prepare local benchmark dirs
 test -d "$LOCAL_DIR" && rm -rf "$LOCAL_DIR"
