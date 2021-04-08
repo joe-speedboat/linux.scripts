@@ -44,7 +44,6 @@ TEST_BLOCK_SIZE_MB=150
 TEST_FILES_COUNT=100
 BENCH_DIR="bench"
 # ---------------------------
-
 cd $(dirname $0)
 
 if [ -r "$(basename $0).conf" ]
@@ -98,8 +97,7 @@ do
   sleep 1
   echo -n .
 done
-UL_BLOCK_ASSEMBLING_END=$(date +%s)
-UL_BLOCK_ASSEMBLING_SEC=$(( $UL_BLOCK_ASSEMBLING_END / $UL_BLOCK_ASSEMBLING_START ))
+UL_BLOCK_ASSEMBLING_SEC=$(( $(date '+%s') - $UL_BLOCK_ASSEMBLING_START))
 if [ $UL_BLOCK_ASSEMBLING_SEC -ge $UL_BLOCK_ASSEMBLING_MAX_WAIT ]
 then
    UL_BLOCK_ASSEMBLING_SEC="timeout_error"
@@ -152,7 +150,7 @@ echo DL_FILES_TIME=$DL_FILES_TIME sec
 
 D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
-echo "$D;$BURL;$USR;ASSEMBLING;Remote Assembling time for $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
+echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
 echo "$D;$BURL;$USR;DOWNLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$DL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
 echo "$D;$BURL;$USR;UPLOAD;$TEST_FILES_COUNT small Files;$UL_ERROR_CNT;$UL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
 echo "$D;$BURL;$USR;DOWNLOAD;$TEST_FILES_COUNT small Files;$DL_ERROR_CNT;$DL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
