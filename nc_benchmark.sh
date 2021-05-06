@@ -97,7 +97,7 @@ UL_BLOCK_ASSEMBLING_START=$(date +%s)
 echo wait for $TEST_BLOCK_SIZE_MB.mb to get assembled on nextcloud
 for i in $(seq 1 $UL_BLOCK_ASSEMBLING_MAX_WAIT)
 do
-  $CURL -X PROPFIND "$DAV_REMOTE_BENCH_DIR" | sed "s|$(echo $DAV_REMOTE_BENCH_DIR | rev | cut -d/ -f-3 | rev)/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-Z0-9]' | grep "^$TEST_BLOCK_SIZE_MB.mb$" && break
+  $CURL -X PROPFIND "$DAV_REMOTE_BENCH_DIR" | sed "s|$(echo $DAV_REMOTE_BENCH_DIR | rev | cut -d/ -f-3 | rev)/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-zA-Z0-9]' | grep "^$TEST_BLOCK_SIZE_MB.mb$" && break
   sleep 1
   echo -n .
 done
@@ -176,7 +176,7 @@ $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
 echo "   delete file: $BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb"
 $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
 sleep 5
-$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-Z0-9]' | egrep "^small_files|^$TEST_BLOCK_SIZE_MB.mb" | while read TRASH_FILE_TO_DELETE
+$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-zA-Z0-9]' | egrep "^small_files|^$TEST_BLOCK_SIZE_MB.mb" | while read TRASH_FILE_TO_DELETE
 do
   $CURL -X DELETE "$DAV_TRASH_URL/$TRASH_FILE_TO_DELETE"
   echo "   delete trash object: ${TRASH_FILE_TO_DELETE}"
