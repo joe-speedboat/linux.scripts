@@ -70,6 +70,7 @@ UL_BLOCK_ASSEMBLING_MAX_WAIT=1200
 test -d "$LOCAL_DIR" && rm -rf "$LOCAL_DIR"
 mkdir -p "$LOCAL_DIR/small_files"
 dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
+md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
    date > $LOCAL_DIR/small_files/$i.txt
@@ -88,6 +89,8 @@ echo upload $TEST_BLOCK_SIZE_MB MB
 UL_BLOCK_SPEED=$($CURL -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
 UL_BLOCK_SPEED=$(( $UL_BLOCK_SPEED / 1024 )) # kbyte per sec
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
 
 # wait for block test to get assempled on nextcloud
 UL_BLOCK_ASSEMBLING_START=$(date +%s)
@@ -103,12 +106,22 @@ if [ $UL_BLOCK_ASSEMBLING_SEC -ge $UL_BLOCK_ASSEMBLING_MAX_WAIT ]
 then
    UL_BLOCK_ASSEMBLING_SEC="timeout_error"
 fi
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
 
 # run block download test
 echo download $TEST_BLOCK_SIZE_MB MB
 DL_BLOCK_SPEED=$($CURL -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" | cut -d. -f1)
 DL_BLOCK_SPEED=$(( $DL_BLOCK_SPEED / 1024 )) # kbyte per sec
+md5sum --check "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum" 2>&1 >/dev/null
+if [ $? -ne 0 ]
+then 
+   DL_BLOCK_SPEED="md5sum error"
+fi
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
+rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;DOWNLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$DL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
 
 # run small file upload test
 UL_ERROR_CNT=0
@@ -123,6 +136,8 @@ do
    fi
 done
 UL_FILES_TIME=$(( $(date '+%s') - $TIME_BEFORE))
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;UPLOAD;$TEST_FILES_COUNT small Files;$UL_ERROR_CNT;$UL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
 
 # run small file download test
 DL_ERROR_CNT=0
@@ -137,6 +152,9 @@ do
    fi
 done
 DL_FILES_TIME=$(( $(date '+%s') - $TIME_BEFORE))
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;DOWNLOAD;$TEST_FILES_COUNT small Files;$DL_ERROR_CNT;$DL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
+
 
 echo BURL=$BURL
 echo TEST_BLOCK_SIZE_MB=$TEST_BLOCK_SIZE_MB
@@ -149,12 +167,7 @@ echo UL_ERROR_CNT=$UL_ERROR_CNT
 echo UL_FILES_TIME=$UL_FILES_TIME sec
 echo DL_FILES_TIME=$DL_FILES_TIME sec
 
-D="$(date '+%Y.%m.%d %H:%M:%S')"
-echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
-echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
-echo "$D;$BURL;$USR;DOWNLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$DL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
-echo "$D;$BURL;$USR;UPLOAD;$TEST_FILES_COUNT small Files;$UL_ERROR_CNT;$UL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
-echo "$D;$BURL;$USR;DOWNLOAD;$TEST_FILES_COUNT small Files;$DL_ERROR_CNT;$DL_FILES_TIME sec" >>  $LOCAL_LOG_FILE
+
 echo uploading results: $LOCAL_LOG_FILE to $DAV_REMOTE_BENCH_DIR
 $CURL  -T "$LOCAL_LOG_FILE" "$DAV_REMOTE_BENCH_DIR/"
 echo "cleaning up test files"
