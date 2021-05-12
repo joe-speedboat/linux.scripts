@@ -71,6 +71,8 @@ test -d "$LOCAL_DIR" && rm -rf "$LOCAL_DIR"
 mkdir -p "$LOCAL_DIR/small_files"
 dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
 md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
+cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
+ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
    date > $LOCAL_DIR/small_files/$i.txt
@@ -88,6 +90,8 @@ $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
 echo upload $TEST_BLOCK_SIZE_MB MB
 UL_BLOCK_SPEED=$($CURL -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
 UL_BLOCK_SPEED=$(( $UL_BLOCK_SPEED / 1024 )) # kbyte per sec
+cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
+ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
