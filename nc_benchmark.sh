@@ -71,8 +71,7 @@ test -d "$LOCAL_DIR" && rm -rf "$LOCAL_DIR"
 mkdir -p "$LOCAL_DIR/small_files"
 dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
 md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
-cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
-ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
+ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls"
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
    date > $LOCAL_DIR/small_files/$i.txt
@@ -115,9 +114,16 @@ echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASS
 echo download $TEST_BLOCK_SIZE_MB MB
 DL_BLOCK_SPEED=$($CURL -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" | cut -d. -f1)
 DL_BLOCK_SPEED=$(( $DL_BLOCK_SPEED / 1024 )) # kbyte per sec
-md5sum --check "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum" 2>&1 >/dev/null
+md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.after"
+ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls.after"
+echo "------ DETAILS BEFORE UPLOAD BIG FILE ------"
 cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
-ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
+cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls
+echo "------ DETAILS AFTER DOWNLOAD BIG FILE ------"
+cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.after
+cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls.after
+
+md5sum --check "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum" 2>&1 >/dev/null
 if [ $? -ne 0 ]
 then 
    DL_BLOCK_SPEED="md5sum error"
