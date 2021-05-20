@@ -78,6 +78,8 @@ then
    echo INFO: create $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb with random data
    dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
 fi
+
+test -f $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
 if [ $? -ne 0 ]
 then
    echo INFO: generating md5sum of $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
