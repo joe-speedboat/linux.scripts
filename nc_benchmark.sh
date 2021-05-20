@@ -141,6 +141,8 @@ then
 fi
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.download"
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download"
+rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls*"
+rm -fr "$LOCAL_DIR/small_files"
 
 # run small file upload test
 UL_ERROR_CNT=0
