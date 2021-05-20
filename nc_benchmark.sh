@@ -73,12 +73,17 @@ test -d "$LOCAL_DIR/small_files" && rm -rf "$LOCAL_DIR/small_files"
 mkdir -p "$LOCAL_DIR/small_files"
 
 touch "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
-if [ $(( $(stat --printf="%s" "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" ) / 1024 / 1024 +1 )) -lt $TEST_BLOCK_SIZE_MB ]
+if [ $(( $(stat --printf="%s" "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" ) / 1024 / 1024 )) -ne $TEST_BLOCK_SIZE_MB ]
 then
    echo INFO: create $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb with random data
    dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
 fi
-test -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum" || md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
+if [ $? -ne 0 ]
+then
+   echo INFO: generating md5sum of $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
+   md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
+fi
+
 ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls"
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
