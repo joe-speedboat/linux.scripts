@@ -83,7 +83,7 @@ fi
 
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
-   echo INFO: $LOCAL_DIR/small_files/$i.txt
+   # echo INFO: $LOCAL_DIR/small_files/$i.txt
    date > $LOCAL_DIR/small_files/$i.txt
 done
 
