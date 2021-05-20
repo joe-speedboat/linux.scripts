@@ -87,9 +87,10 @@ $CURL -X MKCOL "$DAV_REMOTE_BENCH_DIR/small_files" >/dev/null 2>&1
 $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
 
 # run block upload test
-echo upload $TEST_BLOCK_SIZE_MB MB
+echo upload $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
 UL_BLOCK_SPEED=$($CURL -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
 UL_BLOCK_SPEED=$(( $UL_BLOCK_SPEED / 1024 )) # kbyte per sec
+echo upload $TEST_BLOCK_SIZE_MB MB finished: $(date '+%Y.%m.%d %H:%M:%S')
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
@@ -112,9 +113,10 @@ D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
 
 # run block download test
-echo download $TEST_BLOCK_SIZE_MB MB
+echo download $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
 DL_BLOCK_SPEED=$($CURL -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" | cut -d. -f1)
 DL_BLOCK_SPEED=$(( $DL_BLOCK_SPEED / 1024 )) # kbyte per sec
+echo download $TEST_BLOCK_SIZE_MB MB finished: $(date '+%Y.%m.%d %H:%M:%S')
 md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.after"
 ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls.after"
 echo "------ DETAILS BEFORE UPLOAD BIG FILE ------"
