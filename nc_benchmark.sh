@@ -87,6 +87,7 @@ fi
 ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls"
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
+   echo INFO: $LOCAL_DIR/small_files/$i.txt
    date > $LOCAL_DIR/small_files/$i.txt
 done
 
