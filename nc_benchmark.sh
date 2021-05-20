@@ -49,7 +49,11 @@ SPEED_LIMIT_DOWN=4G
 
 cd $(dirname $0)
 
-if [ -r "$(basename $0).conf" ]
+if [ -r "$1" ]
+then
+   echo "INFO: reading external config file: $(basename $0).conf"
+   source "$1"
+elif [ -r "$(basename $0).conf" ]
 then
    echo "INFO: reading external config file: $(basename $0).conf"
    source "$(basename $0).conf"
@@ -64,7 +68,7 @@ DAV_FILE_URL="$BURL/$DAV_BASE_DIR/$DAV_FILE_DIR"
 DAV_TRASH_URL="$BURL/$DAV_BASE_DIR/$DAV_TRASH_DIR"
 DAV_REMOTE_BENCH_DIR="$DAV_FILE_URL/$BENCH_DIR"
 LOCAL_DIR="$HOME/.nc/$CLOUD"
-LOCAL_LOG_FILE="$LOCAL_DIR/$(basename $0).txt"
+LOCAL_LOG_FILE="$LOCAL_DIR/$BENCH_DIR.txt"
 CURL="curl -k -s -u$USR:$PW"
 UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
@@ -189,8 +193,8 @@ echo SPEED_LIMIT_DOWN=$SPEED_LIMIT_DOWN
 echo SPEED_LIMIT_UP=$SPEED_LIMIT_UP
 
 
-echo uploading results: $LOCAL_LOG_FILE to $DAV_REMOTE_BENCH_DIR
-$CURL  -T "$LOCAL_LOG_FILE" "$DAV_REMOTE_BENCH_DIR/"
+echo uploading results: $LOCAL_LOG_FILE to $DAV_FILE_URL/
+$CURL  -T "$LOCAL_LOG_FILE" "$DAV_FILE_URL/"
 echo "cleaning up test files"
 echo "   delete directory: $BENCH_DIR/small_files"
 $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
