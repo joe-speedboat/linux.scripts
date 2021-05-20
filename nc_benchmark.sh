@@ -43,7 +43,8 @@ PW="8M8BG-xxx-4jWHR"
 TEST_BLOCK_SIZE_MB=150
 TEST_FILES_COUNT=100
 BENCH_DIR="bench"
-SPEED_LIMIT=4G
+SPEED_LIMIT_UP=4G
+SPEED_LIMIT_DOWN=4G
 # ---------------------------
 
 cd $(dirname $0)
@@ -64,7 +65,7 @@ DAV_TRASH_URL="$BURL/$DAV_BASE_DIR/$DAV_TRASH_DIR"
 DAV_REMOTE_BENCH_DIR="$DAV_FILE_URL/$BENCH_DIR"
 LOCAL_DIR="$HOME/.nc/$CLOUD"
 LOCAL_LOG_FILE="$LOCAL_DIR/$(basename $0).txt"
-CURL="curl --limit-rate $SPEED_LIMIT -k -s -u$USR:$PW"
+CURL="curl -k -s -u$USR:$PW"
 UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
 # prepare local benchmark dirs
@@ -80,7 +81,7 @@ done
 
 # prepare remote benchmark dirs
 $CURL $DAV_REMOTE_BENCH_DIR/$(basename $LOCAL_LOG_FILE) -o "$LOCAL_LOG_FILE" 2>/dev/null
-cat "$LOCAL_LOG_FILE" 2>/dev/null | grep -q DATE || echo '#DATE;BURL;USER;<UPLOAD|DOWNLOAD>;TEST;ERRORS;RESULTS' >  $LOCAL_LOG_FILE
+cat "$LOCAL_LOG_FILE" 2>/dev/null | grep -q DATE || echo '#DATE;BURL;USER;<UPLOAD|DOWNLOAD>;TEST;ERRORS;RESULTS;SPEED_LIMIT' >  $LOCAL_LOG_FILE
 $CURL "$DAV_REMOTE_BENCH_DIR/small_files/0.txt"  >/dev/null 2>&1 && $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
 $CURL -X MKCOL "$DAV_REMOTE_BENCH_DIR" >/dev/null 2>&1
 $CURL -X MKCOL "$DAV_REMOTE_BENCH_DIR/small_files" >/dev/null 2>&1
@@ -88,12 +89,12 @@ $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
 
 # run block upload test
 echo upload $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
-UL_BLOCK_SPEED=$($CURL -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
+UL_BLOCK_SPEED=$($CURL --limit-rate $SPEED_LIMIT_UP -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
 UL_BLOCK_SPEED=$(( $UL_BLOCK_SPEED / 1024 )) # kbyte per sec
 echo upload $TEST_BLOCK_SIZE_MB MB finished: $(date '+%Y.%m.%d %H:%M:%S')
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 D="$(date '+%Y.%m.%d %H:%M:%S')"
-echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
+echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s;$SPEED_LIMIT_UP" >>  $LOCAL_LOG_FILE
 
 # wait for block test to get assempled on nextcloud
 UL_BLOCK_ASSEMBLING_START=$(date +%s)
@@ -114,8 +115,10 @@ echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASS
 
 # run block download test
 echo download $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
-DL_BLOCK_SPEED=$($CURL -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" | cut -d. -f1)
+DL_BLOCK_SPEED=$($CURL --limit-rate $SPEED_LIMIT_DOWN -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" | cut -d. -f1)
 DL_BLOCK_SPEED=$(( $DL_BLOCK_SPEED / 1024 )) # kbyte per sec
+D="$(date '+%Y.%m.%d %H:%M:%S')"
+echo "$D;$BURL;$USR;DOWNLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$DL_BLOCK_SPEED KByte/s;$SPEED_LIMIT_DOWN" >>  $LOCAL_LOG_FILE
 echo download $TEST_BLOCK_SIZE_MB MB finished: $(date '+%Y.%m.%d %H:%M:%S')
 md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.after"
 ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls.after"
@@ -133,8 +136,6 @@ then
 fi
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
-D="$(date '+%Y.%m.%d %H:%M:%S')"
-echo "$D;$BURL;$USR;DOWNLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$DL_BLOCK_SPEED KByte/s" >>  $LOCAL_LOG_FILE
 
 # run small file upload test
 UL_ERROR_CNT=0
@@ -179,6 +180,8 @@ echo DL_ERROR_CNT=$DL_ERROR_CNT
 echo UL_ERROR_CNT=$UL_ERROR_CNT
 echo UL_FILES_TIME=$UL_FILES_TIME sec
 echo DL_FILES_TIME=$DL_FILES_TIME sec
+echo SPEED_LIMIT_DOWN=$SPEED_LIMIT_DOWN
+echo SPEED_LIMIT_UP=$SPEED_LIMIT_UP
 
 
 echo uploading results: $LOCAL_LOG_FILE to $DAV_REMOTE_BENCH_DIR
