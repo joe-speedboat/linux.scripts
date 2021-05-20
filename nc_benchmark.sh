@@ -43,6 +43,7 @@ PW="8M8BG-xxx-4jWHR"
 TEST_BLOCK_SIZE_MB=150
 TEST_FILES_COUNT=100
 BENCH_DIR="bench"
+SPEED_LIMIT=4G
 # ---------------------------
 
 cd $(dirname $0)
@@ -63,8 +64,8 @@ DAV_TRASH_URL="$BURL/$DAV_BASE_DIR/$DAV_TRASH_DIR"
 DAV_REMOTE_BENCH_DIR="$DAV_FILE_URL/$BENCH_DIR"
 LOCAL_DIR="$HOME/.nc/$CLOUD"
 LOCAL_LOG_FILE="$LOCAL_DIR/$(basename $0).txt"
-CURL="curl -k -s -u$USR:$PW"
-UL_BLOCK_ASSEMBLING_MAX_WAIT=1200
+CURL="curl --limit-rate $SPEED_LIMIT -k -s -u$USR:$PW"
+UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
 # prepare local benchmark dirs
 test -d "$LOCAL_DIR" && rm -rf "$LOCAL_DIR"
