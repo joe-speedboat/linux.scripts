@@ -72,6 +72,9 @@ LOCAL_LOG_FILE="$LOCAL_DIR/$BENCH_DIR.txt"
 CURL="curl -k -s -u$USR:$PW"
 UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
+echo INFO: LOCAL_LOG_FILE=$LOCAL_LOG_FILE
+cat $LOCAL_LOG_FILE || true
+
 # prepare local benchmark dirs
 mkdir -p "$LOCAL_DIR/small_files"
 
