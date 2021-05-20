@@ -69,7 +69,6 @@ CURL="curl -k -s -u$USR:$PW"
 UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
 # prepare local benchmark dirs
-test -d "$LOCAL_DIR/small_files" && rm -rf "$LOCAL_DIR/small_files" 
 mkdir -p "$LOCAL_DIR/small_files"
 
 touch "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
@@ -77,16 +76,11 @@ if [ $(( $(stat --printf="%s" "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" ) / 1024 / 102
 then
    echo INFO: create $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb with random data
    dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
-fi
-
-test -f $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum
-if [ $? -ne 0 ]
-then
    echo INFO: generating md5sum of $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb
    md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
+   ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls"
 fi
 
-ls -l $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls"
 for i in $(seq 1 $TEST_FILES_COUNT)
 do
    echo INFO: $LOCAL_DIR/small_files/$i.txt
@@ -106,7 +100,6 @@ echo upload $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
 UL_BLOCK_SPEED=$($CURL --limit-rate $SPEED_LIMIT_UP -w '%{speed_upload}' -T "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" "$DAV_REMOTE_BENCH_DIR/" | cut -d. -f1)
 UL_BLOCK_SPEED=$(( $UL_BLOCK_SPEED / 1024 )) # kbyte per sec
 echo upload $TEST_BLOCK_SIZE_MB MB finished: $(date '+%Y.%m.%d %H:%M:%S')
-rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Block $TEST_BLOCK_SIZE_MB MB;;$UL_BLOCK_SPEED KByte/s;$SPEED_LIMIT_UP" >>  $LOCAL_LOG_FILE
 
@@ -128,6 +121,7 @@ D="$(date '+%Y.%m.%d %H:%M:%S')"
 echo "$D;$BURL;$USR;UPLOAD;Assembling time $TEST_BLOCK_SIZE_MB.mb;;$UL_BLOCK_ASSEMBLING_SEC sec" >>  $LOCAL_LOG_FILE
 
 # run block download test
+test -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.download" && rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.download"
 echo download $TEST_BLOCK_SIZE_MB MB starting: $(date '+%Y.%m.%d %H:%M:%S')
 DL_BLOCK_SPEED=$($CURL --limit-rate $SPEED_LIMIT_DOWN -w '%{speed_download}' "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" -o "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.download" | cut -d. -f1)
 DL_BLOCK_SPEED=$(( $DL_BLOCK_SPEED / 1024 )) # kbyte per sec
@@ -147,9 +141,7 @@ if [ $(cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download | cut -d\  -f1) != 
 then 
    DL_BLOCK_SPEED="md5sum error"
 fi
-rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.download"
-rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download"
-rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls*"
+rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.*.download"
 rm -fr "$LOCAL_DIR/small_files"
 
 # run small file upload test
