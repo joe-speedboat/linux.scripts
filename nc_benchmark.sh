@@ -69,7 +69,8 @@ CURL="curl -k -s -u$USR:$PW"
 UL_BLOCK_ASSEMBLING_MAX_WAIT=60
 
 # prepare local benchmark dirs
-test -d "$LOCAL_DIR/small_files" && rm -rf "$LOCAL_DIR/small_files" && mkdir -p "$LOCAL_DIR/small_files"
+test -d "$LOCAL_DIR/small_files" && rm -rf "$LOCAL_DIR/small_files" 
+mkdir -p "$LOCAL_DIR/small_files"
 
 touch "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 if [ $(( $(stat --printf="%s" "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" ) / 1024 / 1024 +1 )) -lt $TEST_BLOCK_SIZE_MB ]
