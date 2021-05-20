@@ -75,6 +75,7 @@ mkdir -p "$LOCAL_DIR/small_files"
 touch "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb"
 if [ $(( $(stat --printf="%s" "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" ) / 1024 / 1024 +1 )) -lt $TEST_BLOCK_SIZE_MB ]
 then
+   echo INFO: create $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb with random data
    dd if=/dev/urandom of="$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" bs=1M count=$TEST_BLOCK_SIZE_MB >/dev/null 2>&1
 fi
 test -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum" || md5sum "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb" > "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum"
@@ -135,7 +136,6 @@ cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download
 cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.ls.download
 
 if [ $(cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download | cut -d\  -f1) != $(cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum | cut -d\  -f1) ]
-if [ $? -ne 0 ]
 then 
    DL_BLOCK_SPEED="md5sum error"
 fi
