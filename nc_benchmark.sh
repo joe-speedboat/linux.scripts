@@ -95,7 +95,6 @@ do
 done
 
 # prepare remote benchmark dirs
-$CURL $DAV_REMOTE_BENCH_DIR/$(basename $LOCAL_LOG_FILE) -o "$LOCAL_LOG_FILE" 2>/dev/null
 cat "$LOCAL_LOG_FILE" 2>/dev/null | grep -q DATE || echo '#DATE;BURL;USER;<UPLOAD|DOWNLOAD>;TEST;ERRORS;RESULTS;SPEED_LIMIT' >  $LOCAL_LOG_FILE
 $CURL "$DAV_REMOTE_BENCH_DIR/small_files/0.txt"  >/dev/null 2>&1 && $CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
 $CURL -X MKCOL "$DAV_REMOTE_BENCH_DIR" >/dev/null 2>&1
