@@ -141,8 +141,6 @@ if [ $(cat $LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.md5sum.download | cut -d\  -f1) != 
 then 
    DL_BLOCK_SPEED="md5sum error"
 fi
-rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.*.download"
-rm -fr "$LOCAL_DIR/small_files"
 
 # run small file upload test
 UL_ERROR_CNT=0
@@ -204,5 +202,7 @@ do
   $CURL -X DELETE "$DAV_TRASH_URL/$TRASH_FILE_TO_DELETE"
   echo "   delete trash object: ${TRASH_FILE_TO_DELETE}"
 done
+rm -f "$LOCAL_DIR/$TEST_BLOCK_SIZE_MB.mb.*.download"
+rm -fr "$LOCAL_DIR/small_files"
 echo done
 
