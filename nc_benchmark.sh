@@ -198,12 +198,10 @@ echo SPEED_LIMIT_UP=$SPEED_LIMIT_UP
 echo uploading results: $LOCAL_LOG_FILE to $DAV_FILE_URL/
 $CURL  -T "$LOCAL_LOG_FILE" "$DAV_FILE_URL/"
 echo "cleaning up test files"
-echo "   delete directory: $BENCH_DIR/small_files"
-$CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/small_files/" >/dev/null 2>&1
-echo "   delete file: $BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb"
-$CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/$TEST_BLOCK_SIZE_MB.mb" >/dev/null 2>&1
+echo "   delete directory: $BENCH_DIR"
+$CURL -X DELETE "$DAV_REMOTE_BENCH_DIR/" >/dev/null 2>&1
 sleep 5
-$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-zA-Z0-9]' | egrep "^small_files|^$TEST_BLOCK_SIZE_MB.mb" | while read TRASH_FILE_TO_DELETE
+$CURL -X PROPFIND "$DAV_TRASH_URL" | sed "s|$DAV_TRASH_DIR/|\n|g" | sed 's|<.*||;/^$/!p' | sort -u | grep '[a-zA-Z0-9]' | egrep "^$BENCH_DIR" | while read TRASH_FILE_TO_DELETE
 do
   $CURL -X DELETE "$DAV_TRASH_URL/$TRASH_FILE_TO_DELETE"
   echo "   delete trash object: ${TRASH_FILE_TO_DELETE}"
