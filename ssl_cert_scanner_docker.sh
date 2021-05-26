@@ -13,13 +13,21 @@
 
 # write results to
 CSV=/tmp/ssl_cert_scanner.csv
+# read vars from docker env if present
+[ "x$SCAN_CSV" != "x" ] && CSV=$SCAN_CSV
 
 # ports to try
 PORTS="443 50443 8443"
+# read vars from docker env if present
+[ "x$SCAN_PORTS" != "x" ] && PORTS=$SCAN_PORTS
 
 WAIT_SEC=1
+# read vars from docker env if present
+[ "x$SCAN_WAIT_SEC" != "x" ] && WAIT_SEC=$SCAN_WAIT_SEC
 
 IP_RANGE='127.0.0.1'
+# read vars from docker env if present
+[ "x$SCAN_IP_RANGE" != "x" ] && IP_RANGE=$SCAN_IP_RANGE
 
 echo "IP,PORT,DNS,ISSUER,SUBJECT,START,EXPIRE,DAYS" | tee -a $CSV
 for range in $IP_RANGES
