@@ -64,7 +64,7 @@ help(){
 }
 
 do-search(){
-   FILES="$(fgrep -lir $ARG $DOC/ | grep -v /$ARCHIV_DIR/ | sort )"
+   FILES="$(fgrep -lir $ARG $DOC/ | grep -v "/$ARCHIV_DIR/" | sort )"
    COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
@@ -90,7 +90,7 @@ select-file(){
       echo -n "$NR) " 
       FILE="$(echo $FILES | cut -d\  -f$NR)"
       echo -n "$FILE " | sed "s#$DOC/##g" | sed 's/.txt$/ /'
-      echo $( stat "$FILE" | grep ^Modify | awk '{print $2}' )
+      echo $( stat "$FILE" | grep '^Modify' | awk '{print $2}' )
       NR=$(( $NR + 1 ))
    done
    echo "   q) QUIT" ) | column -t | sed 's/^/   /'
@@ -105,7 +105,7 @@ select-file(){
 view-file() 
 {
    VIEW=true
-   echo "$SELECT" | grep -q [0123456789]
+   echo "$SELECT" | grep -q '[0123456789]'
    if [ $? -eq 0 ] ; then
       for NR in $(seq 1 $COUNT) ; do
          if [ "$SELECT" == "$NR" ] ; then
