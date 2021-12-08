@@ -33,8 +33,8 @@ echo "[Unit]
 Description=user cache file cleanup
 
 [Timer]
-OnBootSec=120
-OnUnitActiveSec=60
+OnBootSec=60
+OnUnitActiveSec=600
 
 Unit=cache_cleanup.service
 
