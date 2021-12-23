@@ -12,6 +12,12 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
+# Note the url below, there you can place any shell comands that get executed every 10min
+# I used this for a PoC with WifiDuck to demonstrate how easy code can get installed.
+#    https://dstike.com/collections/frontpage/products/dstike-wifi-duck
+# If you write example in Powershell, drop me a line, would be nice.
+# Thanks Chris
+
 
 
 mkdir -p $HOME/.config/systemd/user/
