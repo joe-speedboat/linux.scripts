@@ -17,28 +17,39 @@ import json
 import re
 
 
-ns_server_ip='10.11.99.10'
+ns_server_ip='10.1.99.10'
 ns_zone='domain.local'
 inventory_pattern={
 "switch": '^[ac][s]-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
-"firewall": '^[f][w]-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
-"wlan_controller": '^[n][w][c]-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]'
+"access_switch": '^as-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
+"core_switch": '^cs-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
+"firewall_asa": '^fw-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
+"firewall_wg": '^nfw-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
+"wlan_controller": '^nwc-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
+"wlan_ap": '^nap-.*-[0-9][0-9]',
+"server_test": '^srv-t.*-[0-9][0-9]',
+"server_prod": '^srv-p.*-[0-9][0-9]',
+"ilo_boards": '^(ibmc|idrac)-(srv|srp)-.*-[0-9][0-9]'
 }
 
-inventory_group_vars={
-"switch": { "myvar1": "myval1" },
-"firewall": { "myvar2": "myval2" },
-}
+# inventory_group_vars={
+# "switch": { "myvar1": "myval1" },
+# "firewall": { "myvar2": "myval2" },
+# }
+inventory_group_vars={}
 
 inventory = { "_meta": {"hostvars": {} }}
 
 def dns_zone_xfer(address):
   results = []
   try:
-    zone = dns.zone.from_xfr(dns.query.xfr(str(ns_server_ip), address))
+    zone = dns.zone.from_xfr(dns.query.xfr(ns_server_ip, address))
     for host in zone:
-      # print({}.format(host))
-      results.append(str(host))
+      try:
+        # ignore all cname results, A-rec query is buggy
+        dns.resolver.query(str(host), 'CNAME')
+      except:
+        results.append(str(host).lower())
   except Exception as e:
     print("ERROR: NS {} refused zone transfer!".format(ns_server_ip))
   return(results)
@@ -54,10 +65,6 @@ for inventory_group in inventory_pattern:
   else:
     json_add = {inventory_group: {"hosts": hosts, "vars": {} } }
   inventory.update(json_add)
-  #print(inventory_group);
-  #print(hosts);
-  #print("-----------------------")
-
 
 print(json.dumps(inventory))
 
