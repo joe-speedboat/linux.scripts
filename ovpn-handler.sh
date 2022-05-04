@@ -28,7 +28,7 @@ do
    echo "WHICH VPN DO YOU WANT TO MANAGE?"
    echo "--------------------------------"
    echo
-   VPNS="$(ls -1 /etc/openvpn/*.$VPN_SUFF)"
+   VPNS="$(ls -1 $VPN_CONF/*.$VPN_SUFF)"
    for NR in $( seq $(echo $VPNS | wc -w ))
    do
       VPNID=$(echo  $VPNS | cut -d' ' -f$NR | sed "s#$VPN_CONF/##g;s#.$VPN_SUFF##g")
