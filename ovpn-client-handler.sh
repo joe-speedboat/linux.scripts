@@ -1,9 +1,6 @@
 #!/bin/bash
 ###############################################################################################################
 # DESC: tool to manage openvpn connections with menu
-# $Author: chris $
-# $Revision: 1.5 $
-# $RCSfile: ovpn-handler.sh,v $
 ###############################################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
@@ -66,9 +63,9 @@ do
          echo "exec: start vpn $VPNID"
          sudo bash -c "date  > $VPN_LOG.$VPNID.log"
          sleep 1
-         (tail -f $VPN_LOG.$VPNID.log | while read line ; do echo $line | grep -q 'Initialization Sequence Completed' && sleep 1 && sudo screen -d $VPNID && break ; done) &
+         (tail -f $VPN_LOG.$VPNID.log | while read line ; do echo $line | grep -q 'Initialization Sequence Completed' && sleep 1 && sudo tmux detach -s $VPNID && break ; done) &
          clear
-         sudo screen -m -S $VPNID bash -c "openvpn $VPN_CONF/$VPNID.$VPN_SUFF | tee -a $VPN_LOG.$VPNID.log"
+         sudo tmux new -s $VPNID bash -c "openvpn $VPN_CONF/$VPNID.$VPN_SUFF | tee -a $VPN_LOG.$VPNID.log"
          pkill -TERM -f "tail -f .*$VPNID.log"
          sleep 1
          clear
@@ -79,20 +76,3 @@ done
 exit
 
 ################################################################################
-# $Log: ovpn-handler.sh,v $
-# Revision 1.5  2015/06/14 07:03:15  chris
-# bugfix in killall function
-#
-# Revision 1.4  2015/06/11 19:21:59  chris
-# changed vpn startup to jump into screen session while starting vpn tunnel
-# and automatic detach if tunel fail or established
-#
-# Revision 1.3  2014/12/16 12:23:51  chris
-# added sleep when killing vpns, othervise it shows ending vpns as active in menu
-#
-# Revision 1.2  2014/12/16 09:48:14  chris
-# added config suffix for connection file
-#
-# Revision 1.1  2014/12/16 09:45:40  chris
-# Initial revision
-#
