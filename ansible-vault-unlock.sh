@@ -19,20 +19,25 @@ echo '#!/bin/bash
 # arg: -d     -> remove secret
 
 NAME=vault
-PW_CNT=$(keyctl search @u user $NAME 2>/dev/null | wc -l)
-if [ $PW_CNT -lt 1 ]
-then
-   read -s -p "Feed vault password: " PASS
-   keyctl add user $NAME  "$PASS" @u 2>/dev/null
-else
-   keyctl print $(keyctl search @u user $NAME 2>/dev/null)
-fi
 
 if [ "$1" == "-d" ]
 then
    echo "INFO: removing key"
    keyctl purge user $NAME
-fi' > /etc/ansible/ansible-vault-unlock.sh
+   exit 0
+fi
+
+PW_CNT=$(keyctl search @u user $NAME 2>/dev/null | wc -l)
+if [ $PW_CNT -lt 1 ]
+then
+   read -s -p "Feed vault password: " PASS
+   keyctl add user $NAME  "$PASS" @u &>/dev/null
+   echo
+else
+   keyctl print $(keyctl search @u user $NAME 2>/dev/null)
+fi
+
+' > /etc/ansible/ansible-vault-unlock.sh
 
 chmod 700 /etc/ansible/ansible-vault-unlock.sh
 
