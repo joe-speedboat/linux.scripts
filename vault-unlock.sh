@@ -12,11 +12,22 @@
 
 
 # INSTALL:
-# sed -i 's#^.vault_password_file=.*#vault_password_file=/etc/ansible/ansible-vault-unlock.sh#' /etc/ansible/ansible.cfg
+# sed -i 's#^.vault_password_file=.*#vault_password_file=/usr/local/bin/vault-unlock.sh#' /etc/ansible/ansible.cfg
 
 echo '#!/bin/bash
 # without arg -> ask/print secret
+# arg: -r     -> read secret from stdin, only if not filled, do not print it
 # arg: -d     -> remove secret
+
+###### $HOME/.bashrc ######
+# /usr/local/bin/vault-unlock.sh -r
+# if [ ! -S ~/.ssh/ssh_auth_sock ]; then
+#   eval `ssh-agent`
+#   ln -sf "$SSH_AUTH_SOCK" ~/.ssh/ssh_auth_sock
+# fi
+# export SSH_AUTH_SOCK=~/.ssh/ssh_auth_sock
+# ssh-add -l > /dev/null || cat ~/.ssh/id_rsa | SSH_ASKPASS=/usr/local/bin/vault-unlock.sh ssh-add -
+###########################
 
 NAME=vault
 
@@ -34,19 +45,16 @@ then
    keyctl add user $NAME  "$PASS" @u &>/dev/null
    echo
 else
+   [ "$1" == "-r" ] && exit 0
    keyctl print $(keyctl search @u user $NAME 2>/dev/null)
 fi
 
-' > /etc/ansible/ansible-vault-unlock.sh
+' > /usr/local/bin/vault-unlock.sh
 
-chmod 700 /etc/ansible/ansible-vault-unlock.sh
+chmod 755 /usr/local/bin/vault-unlock.sh
 
-/etc/ansible/ansible-vault-unlock.sh
+/usr/local/bin/vault-unlock.sh
 # Feed and remember the password for vault
 
-echo '
-#FEED ANSIBLE VAULT PASSWORD after reboot
-   cmd: sudo -u rundeck --login /etc/ansible/ansible-vault-unlock.sh
-' >> /etc/motd
 
 ################################################################################
