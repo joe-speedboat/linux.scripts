@@ -55,6 +55,7 @@ then
    keyctl purge user $NAME
    echo "INFO: removing ssh-agent"
    ssh-add -D
+   test -f ~/.ssh/ssh_auth_sock && rm -f ~/.ssh/ssh_auth_sock
    exit 0
 fi
 
