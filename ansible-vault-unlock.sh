@@ -15,14 +15,23 @@
 # sed -i 's#^.vault_password_file=.*#vault_password_file=/etc/ansible/ansible-vault-unlock.sh#' /etc/ansible/ansible.cfg
 
 echo '#!/bin/bash
+# without arg -> ask/print secret
+# arg: -d     -> remove secret
+
 NAME=vault
 PW_CNT=$(keyctl search @u user $NAME 2>/dev/null | wc -l)
 if [ $PW_CNT -lt 1 ]
 then
-   read -s -p 'Feed vault password: ' PASS
-   keyctl add user $NAME  "$PASS" @u
+   read -s -p "Feed vault password: " PASS
+   keyctl add user $NAME  "$PASS" @u 2>/dev/null
 else
    keyctl print $(keyctl search @u user $NAME 2>/dev/null)
+fi
+
+if [ "$1" == "-d" ]
+then
+   echo "INFO: removing key"
+   keyctl purge user $NAME
 fi' > /etc/ansible/ansible-vault-unlock.sh
 
 chmod 700 /etc/ansible/ansible-vault-unlock.sh
