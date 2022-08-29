@@ -13,7 +13,7 @@
 # chmod 700 $HOME/bin/vault-unlock.sh
 # sed -i 's#^.vault_password_file=.*#vault_password_file=/usr/local/bin/vault-unlock.sh#' /etc/ansible/ansible.cfg
 # add .bashrc snipped to ansible and ssh user
-# grep $HOME/bin/vault-unlock.sh $HOME/.bashrc || echo '. $HOME/bin/vault-unlock.sh -b'
+# grep $HOME/bin/vault-unlock.sh $HOME/.bashrc || echo '. $HOME/bin/vault-unlock.sh -b' >> $HOME/.bashrc
 
 ### DESCRIPTION ############################################################
 # Due lot of ansible work, I needed a script who can handle:
