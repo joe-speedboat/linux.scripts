@@ -24,7 +24,7 @@ CHAT='-9999999999999'
 
 if [ "$1" == '-f' ]
 then
-   curl -s -F "chat_id=$CHAT" -F document=@$2 https://api.telegram.org/bot$AUTH/sendDocument
+   curl -s -F "chat_id=$CHAT" -F document=@$2 https://api.telegram.org/bot$AUTH/sendDocument >/dev/null
    echo
    echo INFO: Sent file: $2
    exit 0
@@ -43,7 +43,7 @@ fi
 
 MSG_ENC="$(echo """$MSG""" |  curl -Gso /dev/null -w %{url_effective} --data-urlencode @- '' | cut -c 3- )"
 
-curl -s -k -X POST "https://api.telegram.org/bot$AUTH/sendMessage?chat_id=$CHAT&text=$MSG_ENC"
+curl -s -k -X POST "https://api.telegram.org/bot$AUTH/sendMessage?chat_id=$CHAT&text=$MSG_ENC" >/dev/null
 echo
 echo INFO: Sent message: $MSG
 
