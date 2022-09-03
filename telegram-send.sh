@@ -21,17 +21,26 @@
 AUTH='9999999999:AAAAAAAbbbbbcccccccdddd-ddddddddddd'
 CHAT='-9999999999999'
 
+if [ "$1" == '-h' ]
+then
+   echo
+   echo "usage: $(basename $0) -f <filename>           #Send file to destination"
+   echo "       $(basename $0) <message text>          #Send message to destination"
+   echo "       echo \"message text\" | $(basename $0)   #Send message to destination"
+
+   exit 0
+fi
 
 if [ "$1" == '-f' ]
 then
-   curl -s -F "chat_id=$CHAT" -F document=@$2 https://api.telegram.org/bot$AUTH/sendDocument >/dev/null
+   curl -s -F "chat_id=$CHAT" -F document=@$2 https://api.telegram.org/bot$AUTH/sendDocument >/dev/null ; RC=$?
    echo
-   echo INFO: Sent file: $2
+   echo INFO: Sent file: $2 : RC=$RC
    exit 0
 fi
 
 if [ $# -eq 0 ]
-then 
+then
    MSG=$(</dev/stdin)
 elif [ $# -gt 0 ]
 then
@@ -43,7 +52,7 @@ fi
 
 MSG_ENC="$(echo """$MSG""" |  curl -Gso /dev/null -w %{url_effective} --data-urlencode @- '' | cut -c 3- )"
 
-curl -s -k -X POST "https://api.telegram.org/bot$AUTH/sendMessage?chat_id=$CHAT&text=$MSG_ENC" >/dev/null
+curl -s -X POST "https://api.telegram.org/bot$AUTH/sendMessage?chat_id=$CHAT&text=$MSG_ENC" >/dev/null ; RC=$?
 echo
-echo INFO: Sent message: $MSG
+echo INFO: Sent message: RC=$RC
 
