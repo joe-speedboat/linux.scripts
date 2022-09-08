@@ -69,14 +69,27 @@ then
       echo
    fi
 
+  # RESTORE SSH-AGENT SETTINGS
+  if [ -f ~/.ssh/$HOSTNAME-agent.sh ]
+  then
+    # recover existing ssh-agent settings
+    . ~/.ssh/$HOSTNAME-agent.sh
+
+    ssh-add -l >/dev/null 2>&1
+    if [ $? -ne 0 ] #verify settings and cleanup if they are wrong
+    then
+      rm -f ~/.ssh/$HOSTNAME-agent.sh
+      unset SSH_AGENT_PID
+      unset SSH_AUTH_SOCK
+    fi
+  fi
+
   ###  START SSH-AGENT IF NEEDED
   if [ ! -f ~/.ssh/$HOSTNAME-agent.sh ]
   then
      echo "INFO: Initializing ssh-agent"
      ssh-agent | grep -v 'Agent pid' > ~/.ssh/$HOSTNAME-agent.sh
   fi
-  # RESTORE SSH-AGENT SETTINGS
-  . ~/.ssh/$HOSTNAME-agent.sh
 
   ssh-add -l > /dev/null 
   if [ $? -ne 0 ] 
