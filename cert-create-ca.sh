@@ -63,7 +63,7 @@ then
    ls -l ${BASE_DIR}/servers/${HOSTF}_*
 else
    echo "------ create server private key"
-   openssl genrsa -out "${BASE_DIR}/servers/${HOSTF}_privkey.pem" $PRIV_KEYLEN -key "${BASE_DIR}/servers/${HOSTF}_privkey.pem"
+   openssl genrsa -out "${BASE_DIR}/servers/${HOST}_privkey.pem" $PRIV_KEYLEN
    echo "------ create server csr"
    openssl req -key "${BASE_DIR}/servers/${HOSTF}_privkey.pem" -new -sha256 -out "tmp/${HOSTF}.csr.pem" -subj "$CERT_SUBJ/CN=${HOST}"
    echo "sign csr"
