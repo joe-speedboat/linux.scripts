@@ -11,9 +11,9 @@
 ### INSTALL ###
 # curl https://raw.githubusercontent.com/joe-speedboat/shell.scripts/master/vault-unlock.sh > $HOME/bin/vault-unlock.sh
 # chmod 700 $HOME/bin/vault-unlock.sh
-# sed -i 's#^.vault_password_file=.*#vault_password_file=/usr/local/bin/vault-unlock.sh#' /etc/ansible/ansible.cfg
+# sed -i "s#^.vault_password_file=.*#vault_password_file=$HOME/bin/vault-unlock.sh#" /etc/ansible/ansible.cfg
 # add .bashrc snipped to ansible and ssh user
-# grep $HOME/bin/vault-unlock.sh $HOME/.bashrc || echo '. $HOME/bin/vault-unlock.sh -b' >> $HOME/.bashrc
+# grep '$HOME/bin/vault-unlock.sh' $HOME/.bashrc || echo '. $HOME/bin/vault-unlock.sh -b' >> $HOME/.bashrc
 
 ### DESCRIPTION ############################################################
 # Due lot of ansible work, I needed a script who can handle:
@@ -47,6 +47,7 @@ then
    echo "INFO: removing ssh-agent"
    ssh-add -D
    rm -f ~/.ssh/$HOSTNAME-agent.sh 2>/dev/null
+   pkill -9 -f ssh-agent -u $USER
    unset SSH_AUTH_SOCK
    unset SSH_AGENT_PID
    exit 0
@@ -75,12 +76,15 @@ then
     # recover existing ssh-agent settings
     . ~/.ssh/$HOSTNAME-agent.sh
 
-    ssh-add -l >/dev/null 2>&1
-    if [ $? -ne 0 ] #verify settings and cleanup if they are wrong
+    ps $SSH_AGENT_PID >/dev/null 2>&1
+    if [ $? -ne 0 ] 
     then
-      rm -f ~/.ssh/$HOSTNAME-agent.sh
-      unset SSH_AGENT_PID
+      echo "INFO: removing existing ssh-agent due invalid config"
+      ssh-add -D
+      rm -fv ~/.ssh/$HOSTNAME-agent.sh
+      pkill -9 -f ssh-agent -u $USER
       unset SSH_AUTH_SOCK
+      unset SSH_AGENT_PID
     fi
   fi
 
@@ -89,13 +93,14 @@ then
   then
      echo "INFO: Initializing ssh-agent"
      ssh-agent | grep -v 'Agent pid' > ~/.ssh/$HOSTNAME-agent.sh
+     . ~/.ssh/$HOSTNAME-agent.sh
   fi
 
   ssh-add -l > /dev/null 
   if [ $? -ne 0 ] 
   then
     ### ADD SSH-KEY TO AGENT
-    $SCRIPT | SSH_ASKPASS=cat setsid -w  ssh-add $SSH_PRIV_KEY_CRYPT
+    $SCRIPT | SSH_ASKPASS=cat setsid -w ssh-add $SSH_PRIV_KEY_CRYPT
     ssh-add -l > /dev/null || echo "ERROR: could not add ssh-agent key, maybe passphrase is invalid?"
   fi
 fi
@@ -112,5 +117,3 @@ then
    fi
 fi
 ################################################################################
-
-
