@@ -1,0 +1,388 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-09-19T12:02:24Z'
+  groups:
+    -
+      uuid: ad48ac42c56f46d2aa1a959043218d41
+      name: Templates
+  templates:
+    -
+      uuid: 34c32e8713794d73afc016c65623fa4c
+      template: QuantumDxi
+      name: QuantumDxi
+      description: |
+        Installation:
+        - Import Template into Zabbix
+        - Enable user: cliviewer in Quantum and allow password login
+        - Define MACRO {$CLIVIEWER_PASSWORD} in Template or Host
+        - Assign Template to Host
+      groups:
+        -
+          name: Templates
+      items:
+        -
+          uuid: 86caf010086e47debfc39d6abe3bae2c
+          name: AvailableDiskSpace
+          type: CALCULATED
+          key: AvailableDiskSpace
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Available Disk Space = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: bf60dd475b5a4108b97522500fdcc549
+          name: CompressionRatio
+          type: CALCULATED
+          key: CompressionRatio
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDataReductionCmd])'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Compression Ratio = (.*) : 1'
+                - \1
+          tags:
+            -
+              tag: Quantum
+              value: DataReduction
+        -
+          uuid: 6d78bef014c24cb4a3fe3ea18029070f
+          name: DeduplicatedData
+          type: CALCULATED
+          key: DeduplicatedData
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Deduplicated Data = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: 8aa83be3140049b4acf25c2a8ec734bd
+          name: DeduplicationRatio
+          type: CALCULATED
+          key: DeduplicationRatio
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDataReductionCmd])'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Deduplication Ratio = (.*) : 1'
+                - \1
+          tags:
+            -
+              tag: Quantum
+              value: DataReduction
+        -
+          uuid: 5a225ba16d6343588ba0940796f25f3b
+          name: DiskCapacity
+          type: CALCULATED
+          key: DiskCapacity
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Disk Capacity = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: 4ffb5400ca1240b8835dccab4e862fae
+          name: FreeSpace
+          type: CALCULATED
+          key: FreeSpace
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Free Space = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: e0718ba3388e480fb269f269a4a35cb9
+          name: ReclaimableSpace
+          type: CALCULATED
+          key: ReclaimableSpace
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Reclaimable Space = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: b50596a6a3384e12be186fb2451f2643
+          name: cliDataReductionCmd
+          type: SSH
+          key: 'ssh.run[cliDataReductionCmd]'
+          trends: '0'
+          value_type: TEXT
+          params: 'syscli --get datareductionstat'
+          username: cliviewer
+          password: '{$CLIVIEWER_PASSWORD}'
+          tags:
+            -
+              tag: Quantum
+              value: DataReduction
+        -
+          uuid: 62f9211f3bcc424bb45fca90ecb32e49
+          name: cliDiskUsageCmd
+          type: SSH
+          key: 'ssh.run[cliDiskUsageCmd]'
+          trends: '0'
+          value_type: TEXT
+          params: 'syscli --get diskusage'
+          username: cliviewer
+          password: '{$CLIVIEWER_PASSWORD}'
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: 002dbafbe5344fbfaea26a7304051a8b
+          name: SystemMetadata
+          type: CALCULATED
+          key: SystemMetadata
+          trends: '0'
+          value_type: TEXT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*System Metadata = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: 68b5420146064c11b3155b0294c96457
+          name: TotalReductionRatio
+          type: CALCULATED
+          key: TotalReductionRatio
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDataReductionCmd])'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Total Reduction Ratio = (.*) : 1'
+                - \1
+          tags:
+            -
+              tag: Quantum
+              value: DataReduction
+        -
+          uuid: efb3a6d920e84def9aa67ee750c08bb0
+          name: UsedDiskSpace
+          type: CALCULATED
+          key: UsedDiskSpace
+          value_type: FLOAT
+          params: 'last(//ssh.run[cliDiskUsageCmd])'
+          description: 'in MB'
+          preprocessing:
+            -
+              type: REGEX
+              parameters:
+                - '.*Used Disk Space = (.* [MGT]B).*'
+                - \1
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value.match(/^.*TB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024*1024);
+                  } else if (value.match(/^.*GB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value*1024);
+                  } else if (value.match(/^.*MB$/)) {
+                    value = value.replace(/...$/, '');
+                    return(value);
+                  } else {
+                    throw value + "is  invalid, MB, GB, TB expected";
+                  }
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+        -
+          uuid: 18b222abb1f24df6a6b321945d113372
+          name: UsedDiskSpacePercent
+          type: CALCULATED
+          key: UsedDiskSpacePercent
+          value_type: FLOAT
+          params: 'last(//UsedDiskSpace)/last(//DiskCapacity)*100'
+          tags:
+            -
+              tag: Quantum
+              value: DiskUsage
+          triggers:
+            -
+              uuid: 32f58da4d28f47f9a37d78586e3d52a8
+              expression: 'last(/QuantumDxi/UsedDiskSpacePercent)>={$DISK_USAGE_AVERAGE}'
+              name: 'UsedDiskSpacePercent is over {$DISK_USAGE_AVERAGE} %'
+              priority: AVERAGE
+              description: 'https://qsupport.quantum.com/kb/flare/Content/dxi/DXi_V5000/Series/User_Guide/Disk_Usage_Overview.htm'
+            -
+              uuid: 3cf47fc8086f48b4a1dccf43fd52e6af
+              expression: 'last(/QuantumDxi/UsedDiskSpacePercent)>={$DISK_USAGE_HIGH}'
+              name: 'UsedDiskSpacePercent is over {$DISK_USAGE_HIGH} %'
+              priority: HIGH
+              description: 'https://qsupport.quantum.com/kb/flare/Content/dxi/DXi_V5000/Series/User_Guide/Disk_Usage_Overview.htm'
+            -
+              uuid: 0dda8528146f4e8292e633957c55998a
+              expression: 'last(/QuantumDxi/UsedDiskSpacePercent)>={$DISK_USAGE_WARN}'
+              name: 'UsedDiskSpacePercent is over {$DISK_USAGE_WARN} %'
+              priority: WARNING
+              description: 'https://qsupport.quantum.com/kb/flare/Content/dxi/DXi_V5000/Series/User_Guide/Disk_Usage_Overview.htm'
+              manual_close: 'YES'
+      macros:
+        -
+          macro: '{$CLIVIEWER_PASSWORD}'
+          type: SECRET_TEXT
+          description: 'Quantum > Configuration > System > SystemUsers > cliviewer'
+        -
+          macro: '{$DISK_USAGE_AVERAGE}'
+          value: '80'
+          description: 'If Disk Usage is over x %'
+        -
+          macro: '{$DISK_USAGE_HIGH}'
+          value: '85'
+          description: 'If Disk Usage is over x %'
+        -
+          macro: '{$DISK_USAGE_WARN}'
+          value: '75'
+          description: 'If Disk Usage is over x %'
