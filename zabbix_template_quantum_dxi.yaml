@@ -1,10 +1,6 @@
 zabbix_export:
-  version: '6.0'
-  date: '2022-09-19T12:02:24Z'
-  groups:
-    -
-      uuid: ad48ac42c56f46d2aa1a959043218d41
-      name: Templates
+  version: '6.2'
+  date: '2022-09-19T14:35:15Z'
   templates:
     -
       uuid: 34c32e8713794d73afc016c65623fa4c
@@ -25,6 +21,7 @@ zabbix_export:
           name: AvailableDiskSpace
           type: CALCULATED
           key: AvailableDiskSpace
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -59,6 +56,7 @@ zabbix_export:
           name: CompressionRatio
           type: CALCULATED
           key: CompressionRatio
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
           preprocessing:
@@ -76,6 +74,7 @@ zabbix_export:
           name: DeduplicatedData
           type: CALCULATED
           key: DeduplicatedData
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -110,6 +109,7 @@ zabbix_export:
           name: DeduplicationRatio
           type: CALCULATED
           key: DeduplicationRatio
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
           preprocessing:
@@ -127,6 +127,7 @@ zabbix_export:
           name: DiskCapacity
           type: CALCULATED
           key: DiskCapacity
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -161,6 +162,7 @@ zabbix_export:
           name: FreeSpace
           type: CALCULATED
           key: FreeSpace
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -195,6 +197,7 @@ zabbix_export:
           name: ReclaimableSpace
           type: CALCULATED
           key: ReclaimableSpace
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -229,6 +232,7 @@ zabbix_export:
           name: cliDataReductionCmd
           type: SSH
           key: 'ssh.run[cliDataReductionCmd]'
+          delay: 15m
           trends: '0'
           value_type: TEXT
           params: 'syscli --get datareductionstat'
@@ -243,6 +247,7 @@ zabbix_export:
           name: cliDiskUsageCmd
           type: SSH
           key: 'ssh.run[cliDiskUsageCmd]'
+          delay: 15m
           trends: '0'
           value_type: TEXT
           params: 'syscli --get diskusage'
@@ -257,6 +262,7 @@ zabbix_export:
           name: SystemMetadata
           type: CALCULATED
           key: SystemMetadata
+          delay: 15m
           trends: '0'
           value_type: TEXT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
@@ -292,6 +298,7 @@ zabbix_export:
           name: TotalReductionRatio
           type: CALCULATED
           key: TotalReductionRatio
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
           preprocessing:
@@ -309,6 +316,7 @@ zabbix_export:
           name: UsedDiskSpace
           type: CALCULATED
           key: UsedDiskSpace
+          delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
@@ -343,6 +351,7 @@ zabbix_export:
           name: UsedDiskSpacePercent
           type: CALCULATED
           key: UsedDiskSpacePercent
+          delay: 15m
           value_type: FLOAT
           params: 'last(//UsedDiskSpace)/last(//DiskCapacity)*100'
           tags:
