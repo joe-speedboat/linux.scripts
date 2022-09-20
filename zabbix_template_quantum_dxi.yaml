@@ -7,6 +7,8 @@ zabbix_export:
       template: QuantumDxi
       name: QuantumDxi
       description: |
+        Documentation:
+        - https://www.bitbull.ch/wiki/index.php/Qunatum_DXi_4800_Template
         Installation:
         - Import template into Zabbix
         - Enable user: cliviewer in Quantum and allow password login
