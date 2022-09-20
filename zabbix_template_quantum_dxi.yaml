@@ -1,6 +1,6 @@
 zabbix_export:
   version: '6.2'
-  date: '2022-09-19T14:35:15Z'
+  date: '2022-09-20T07:21:54Z'
   templates:
     -
       uuid: 34c32e8713794d73afc016c65623fa4c
@@ -8,10 +8,10 @@ zabbix_export:
       name: QuantumDxi
       description: |
         Installation:
-        - Import Template into Zabbix
+        - Import template into Zabbix
         - Enable user: cliviewer in Quantum and allow password login
-        - Define MACRO {$CLIVIEWER_PASSWORD} in Template or Host
-        - Assign Template to Host
+        - Define MACRO {$CLIVIEWER_PASSWORD} in template or host
+        - Assign template to Host
       groups:
         -
           name: Templates
@@ -23,6 +23,7 @@ zabbix_export:
           key: AvailableDiskSpace
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -59,6 +60,7 @@ zabbix_export:
           delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
+          description: 'Data Reduction Ratio: value/1'
           preprocessing:
             -
               type: REGEX
@@ -76,6 +78,7 @@ zabbix_export:
           key: DeduplicatedData
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -112,6 +115,7 @@ zabbix_export:
           delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
+          description: 'Data Reduction Ratio: value/1'
           preprocessing:
             -
               type: REGEX
@@ -129,6 +133,7 @@ zabbix_export:
           key: DiskCapacity
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -164,6 +169,7 @@ zabbix_export:
           key: FreeSpace
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -199,6 +205,7 @@ zabbix_export:
           key: ReclaimableSpace
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -263,8 +270,8 @@ zabbix_export:
           type: CALCULATED
           key: SystemMetadata
           delay: 15m
-          trends: '0'
-          value_type: TEXT
+          value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -301,6 +308,7 @@ zabbix_export:
           delay: 15m
           value_type: FLOAT
           params: 'last(//ssh.run[cliDataReductionCmd])'
+          description: 'Data Reduction Ratio: value/1'
           preprocessing:
             -
               type: REGEX
@@ -318,6 +326,7 @@ zabbix_export:
           key: UsedDiskSpace
           delay: 15m
           value_type: FLOAT
+          units: M
           params: 'last(//ssh.run[cliDiskUsageCmd])'
           description: 'in MB'
           preprocessing:
@@ -353,6 +362,7 @@ zabbix_export:
           key: UsedDiskSpacePercent
           delay: 15m
           value_type: FLOAT
+          units: '%'
           params: 'last(//UsedDiskSpace)/last(//DiskCapacity)*100'
           tags:
             -
@@ -395,3 +405,4 @@ zabbix_export:
           macro: '{$DISK_USAGE_WARN}'
           value: '75'
           description: 'If Disk Usage is over x %'
+
