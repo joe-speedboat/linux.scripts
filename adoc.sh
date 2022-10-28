@@ -18,8 +18,10 @@ SCRIPT="$(basename $0)"
 ARG="$*"
 
 do-search(){
-   FILES="$(ansible-doc -l | grep -i $ARG | tr ' ' '°' )"
-   COUNT=$(echo "$FILES" | wc -l)
+   ansible-doc $ARG 2>/tmp/.adoc.tmp
+   grep -q 'not found in:' /tmp/.adoc.tmp || exit 0
+   FILES="$(ansible-doc -l 2>/dev/null | grep -i $ARG | tr ' ' '°' )"
+   COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
       exit 0
