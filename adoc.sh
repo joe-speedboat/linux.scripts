@@ -64,7 +64,7 @@ view-file()
    if [ $? -eq 0 ] ; then
       for NR in $(seq 1 $COUNT) ; do
          if [ "$SELECT" == "$NR" ] ; then
-            ansible-doc $(echo $FILES | cut -d' '  -f $SELECT | tr '°' ' ' | cut -d: -f1)
+            ansible-doc $(echo $FILES | cut -d' '  -f $SELECT | tr '°' ' ' | cut -d: -f1) | less
          fi
       done
    fi
