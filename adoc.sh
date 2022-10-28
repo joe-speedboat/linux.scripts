@@ -20,7 +20,7 @@ ARG="$*"
 do-search(){
    ansible-doc $ARG 2>/tmp/.adoc.tmp
    grep -q 'not found in:' /tmp/.adoc.tmp || exit 0
-   FILES="$(ansible-doc -l 2>/dev/null | grep -i $ARG | tr ' ' '°' )"
+   FILES="$(ansible-doc -lj 2>/dev/null | sed -e 's/^[ \t]*//;1d;$d;s/[,"]//g;s/[ ]+?//g' | grep -i $ARG | tr ' ' '°' )"
    COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
       echo nothing found ...
@@ -39,16 +39,16 @@ select-file(){
    echo "WHICH DOC DO YOU WANT TO SEE ?"
    echo "------------------------------"
    echo "Search: $ARG"
-   ( echo
-   for NR in $(seq 1 $COUNT) ; do
+   echo
+   ( for NR in $(seq 1 $COUNT) ; do
       echo -n "   "
       [ $COUNT -ge 10 ] && [ $NR -le 9 ] && echo -n ' '
       echo -n "$NR) " 
       FILE="$(echo $FILES | cut -d\  -f$NR)"
-      echo "$FILE" | tr '°' ' '
+      echo "$FILE" | tr '°' ' ' 
       NR=$(( $NR + 1 ))
-   done
-   echo "   q) QUIT" ) | sed 's/^/   /'
+   done ) | column -t -s:
+   echo "q) QUIT" | sed 's/^/   /'
    echo
    echo -n "Please select: "
    read SELECT
@@ -64,8 +64,7 @@ view-file()
    if [ $? -eq 0 ] ; then
       for NR in $(seq 1 $COUNT) ; do
          if [ "$SELECT" == "$NR" ] ; then
-            # $EDIT +"set ic|/$ARG" $(echo $FILES | cut -d' '  -f $SELECT)
-            ansible-doc $(echo $FILES | cut -d' '  -f $SELECT | tr '°' ' ' | awk '{print $1}')
+            ansible-doc $(echo $FILES | cut -d' '  -f $SELECT | tr '°' ' ' | cut -d: -f1)
          fi
       done
    fi
