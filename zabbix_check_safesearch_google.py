@@ -21,7 +21,7 @@ import socket
 import dns.resolver
 
 # print debug messages
-debug_output = True
+debug_output = False
 # url to test
 google_dns = "www.google.com"
 # safesearch test request
