@@ -11,25 +11,34 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
+# due ssl inspection enabled, we want to avoid ssl errors
 import requests
+from requests.exceptions import SSLError
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import socket
 import dns.resolver
 
 # print debug messages
-debug_output = False
+debug_output = True
 # url to test
 google_dns = "www.google.com"
 # safesearch test request
-ss_url = "https://" + google_dns + "/search?q=test&safe=active"
+ss_url = "https://" + google_dns + "/search?q=test"
 # safesearch response url
-ss_url_safesearch_response = "safesearch=active"
+ss_url_safesearch_response = "safe%3Dactive"
 # google safesearch ips
 safesearch_ip_range = ["216.239.38.120", "216.239.38.119"]
 
 # query google for safesearch settings
-response = requests.get(ss_url)
-if debug_output:
-  print("debug: response.url: " + response.url)
+try:
+  response = requests.get(ss_url, verify=False)
+  if debug_output:
+    print("debug: response.url: " + response.url)
+except SSLError as e:
+  print("Suppressed SSL Error:", e)
+
 
 # check if the safe search parameter is present in the response
 safe_search_param = ss_url_safesearch_response in response.url
@@ -48,7 +57,7 @@ if debug_output:
 
 # combine the checks and print the result
 if safe_search_param or is_safesearch_ip:
-    print("GOOGLE=RESTRICTED")
+    print("SAFESEARCH_GOOGLE:RESTRICTED")
 else:
-    print("GOOGLE=OPEN")
+    print("SAFESEARCH_GOOGLE:OPEN")
 
