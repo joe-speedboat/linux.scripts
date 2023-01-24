@@ -53,5 +53,6 @@ try:
 except SSLError as e:
   print("Suppressed SSL Error:", e)
 
-print("SITE:" + fqdn + "=" + str(site_works))
+print("SITE-" + fqdn + ":" + str(site_works))
+
 
