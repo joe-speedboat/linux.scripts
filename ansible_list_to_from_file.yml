@@ -1,0 +1,37 @@
+- hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+  - set_fact:
+      mylist:
+      - val1
+      - val2
+      - val3
+      - val4
+  - debug: var=mylist
+  - name: save mylist as it is
+    copy:
+      dest: todo.list
+      content: "{{ mylist }}"
+    run_once: true
+    connection: local
+  - set_fact:
+      mylist2: "{{ lookup('file', 'todo.list') }}"
+  - debug: var=mylist2
+
+  - name: save mylist line by line
+    copy:
+      dest: todo.txt
+      content: "{{ mylist|join('\n') }}"
+    run_once: true
+    connection: local
+  - name: save mylist line by line
+    copy:
+      dest: todo.txt
+      content: "{{ mylist }}"
+    run_once: true
+    connection: local
+  - set_fact:
+      mylist3: "{{ lookup('file', 'todo.txt') }}"
+  - debug: var=mylist3
+
