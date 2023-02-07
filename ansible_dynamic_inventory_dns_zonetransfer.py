@@ -17,11 +17,13 @@ import json
 import re
 import os
 from datetime import datetime, timedelta
-
-cache_timeout=3600
 cache_file = os.path.join(os.path.expanduser("~"), ".ansible_inventory_cache")
+config_file = "/etc/ansible/ansible_dynamic_inventory_dns_zonetransfer.conf"
 
-ns_server_ip='10.1.99.10'
+###### THIS MAY GO TO CONFIG FILE ###############################
+# how long to keep the cache file
+cache_timeout=3600
+ns_server_ip='127.0.0.1'
 ns_zone='domain.local'
 inventory_pattern={
 "switch": '^[ac][s]-([a-z]|[a-z][a-z])-[a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9]',
@@ -36,17 +38,18 @@ inventory_pattern={
 "ilo_boards": '^(ibmc|idrac)-(srv|srp)-.*-[0-9][0-9]'
 }
 
-# inventory_group_vars={
-# "switch": { "myvar1": "myval1" },
-# "firewall": { "myvar2": "myval2" },
-# }
-
-
-
 #inventory_group_vars={
 #"access_switch": { "ansible_network_os": "community.network.ce", "ansible_become": False, "ansible_connection": "ansible.netcommon.network_cli", "ansible_network_cli_ssh_type": "paramiko" },
 #"pop_router": { "ansible_network_os": "community.network.ce", "ansible_become": False, "ansible_connection": "ansible.netcommon.network_cli", "ansible_network_cli_ssh_type": "paramiko" }
 #}
+#####################################################################
+if os.path.exists(config_file):
+    with open(config_file, 'r') as file:
+        for line in file:
+            # process each line to extract variables and values
+            var, value = line.strip().split("=")
+            globals()[var] = value
+
 
 def generate_inventory_data():
   inventory_group_vars={}
