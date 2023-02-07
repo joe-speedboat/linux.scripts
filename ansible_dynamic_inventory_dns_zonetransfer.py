@@ -44,16 +44,11 @@ inventory_pattern={
 #}
 #####################################################################
 # source config file if ther is any
-if os.path.exists(config_file):
-    with open(config_file, 'r') as file:
-        for line in file:
-            line = line.strip()
-            # ignore blank lines and comments
-            if line == "" or line.startswith("#"):
-                continue
-            # process each line to extract variables and values
-            var, value = line.split("=")
-            globals()[var] = value
+try:
+    with open(config_file) as f:
+        exec(f.read(), locals(), globals())
+except FileNotFoundError:
+    pass
 
 def generate_inventory_data():
   inventory_group_vars={}
