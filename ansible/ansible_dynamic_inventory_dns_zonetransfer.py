@@ -68,6 +68,7 @@ def generate_inventory_data():
           #print('+')
     except Exception as e:
       print("ERROR: NS {} refused zone transfer!".format(ns_server_ip))
+      exit(1)
     return(results)
 
   zone_records = dns_zone_xfer(ns_zone)
