@@ -1,0 +1,16 @@
+- hosts: localhost
+  vars:
+    all_var: all_value1
+  tasks:
+  - debug: var=all_var
+  - name: delegate var to all hosts
+    set_fact:
+      all_var: "{{ all_var }}"
+    delegate_to: "{{ item }}"
+    delegate_facts: true
+    loop: "{{ groups['all'] }}"
+
+- hosts: host2.domain.local
+  tasks:
+  - debug: var=all_var
+
