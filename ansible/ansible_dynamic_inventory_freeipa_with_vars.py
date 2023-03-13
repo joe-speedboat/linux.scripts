@@ -13,6 +13,8 @@
 # freeipauser : an unprivileged user account for connecting to the API
 # freeipapassword : password for freeipauser
 
+# description field of hosts and host_groups can be used to inject variables into ansible inventory, eg:
+# vars: { "var1": "val1", "list1": [ "item1", "item2" ], "dict1": { "key1": "val1", "key2": "val2" } }
 from python_freeipa import Client
 from argparse import ArgumentParser
 import argparse
@@ -21,10 +23,6 @@ import urllib3
 import re
 from os import environ as env
 from sys import exit
-
-# This script can read host/group vars from description field and merge them
-# variable is always initiated with "vars:" folowed by json syntax, eg:
-# vars: {  "ansible_hosts_var": "host-val1", "host-only-var": "val2", "list1": [    "host-item1"  ],  "dict1": {    "hostkey1": "dval1"  }}
 
 # We don't need warnings
 urllib3.disable_warnings()
@@ -104,9 +102,6 @@ def get_host_vars(client, host):
         return extract_vars(description)
     return {}
 
-def get_group_vars(description):
-    return extract_vars(description)
-
 def get_group_members(hostgroup):
     members = []
     if 'member_host' in hostgroup:
@@ -119,22 +114,27 @@ def get_group_children(hostgroup):
         children = hostgroup['member_hostgroup']
     return children
 
+def get_group_vars(description):
+    vars_match = re.search(r'vars:\s*({.*})', description)
+    if vars_match:
+        return json.loads(vars_match.group(1))
+    return {}
+
 def get_hostgroup_vars(client, hostgroup):
     result = client._request(
         'hostgroup_show',
         hostgroup,
         {'all': True, 'raw': False}
     )['result']
+    group_vars = {}
     if 'description' in result:
         description = result['description'][0]
-        group_vars = get_group_vars(description)
+        group_vars.update(get_group_vars(description))
         if 'member_hostgroup' in result:
             for child_hostgroup in result['member_hostgroup']:
                 child_vars = get_hostgroup_vars(client, child_hostgroup)
                 group_vars.update(child_vars)
-        return group_vars
-    return {}
-
+    return group_vars
 
 def get_inventory(client):
     inventory = {}
@@ -146,29 +146,32 @@ def get_inventory(client):
     )['result']
     for hostgroup in result:
         group_vars = get_hostgroup_vars(client, hostgroup['cn'][0])
-        members = get_group_members(hostgroup)
-        children = get_group_children(hostgroup)
         inventory[hostgroup['cn'][0]] = {
-            'hosts': members,
-            'children': children,
+            'hosts': get_group_members(hostgroup),
+            'children': get_group_children(hostgroup),
+            'vars': group_vars
         }
-        inventory[hostgroup['cn'][0]].update(group_vars)
-        for member in members:
-            if member not in hostvars:
-                hostvars[member] = {}
-            host_result = client._request(
-                'host_show',
-                member,
-                {'all': True, 'raw': False}
-            )['result']
-            if 'description' in host_result:
-                description = host_result['description'][0]
-                host_vars = get_group_vars(description)
-                hostvars[member].update(host_vars)
-            hostvars[member].update(group_vars)
+        # Merge group vars with parent group vars, giving precedence to group vars
+        parent = hostgroup.get('ipahostgroupmemberof', [])
+        while parent:
+            parent_group = parent.pop(0).split('=', 1)[1]
+            if parent_group in inventory:
+                parent_vars = inventory[parent_group].get('vars', {})
+                parent = parent + inventory[parent_group].get('ipahostgroupmemberof', [])
+                parent_vars.update(group_vars)
+                group_vars = parent_vars
+        for host in inventory[hostgroup['cn'][0]]['hosts']:
+            if host not in hostvars:
+                hostvars[host] = {}
+            host_vars = get_host_vars(client, host)
+            # Merge host vars with group vars, giving precedence to host vars
+            merged_vars = group_vars.copy()
+            merged_vars.update(host_vars)
+            hostvars[host].update(merged_vars)
 
     inventory['_meta'] = {'hostvars': hostvars}
     return json.dumps(inventory, indent=1, sort_keys=True)
+
 
 
 def main():
