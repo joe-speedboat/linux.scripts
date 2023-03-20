@@ -17,7 +17,6 @@
 # vars: { "var1": "val1", "list1": [ "item1", "item2" ], "dict1": { "key1": "val1", "key2": "val2" } }
 from python_freeipa import Client
 from argparse import ArgumentParser
-import argparse
 import json
 import urllib3
 import re
@@ -71,10 +70,11 @@ def get_args():
     )
     return parser.parse_args()
 
-def get_client(server, user, password):
+# Function to create a client instance and authenticate with FreeIPA API
+def get_client(server, user, password, ipaversion):
     client = Client(
         server,
-        version='2.228',
+        version=ipaversion,
         verify_ssl=False
     )
     client.login(
@@ -83,12 +83,14 @@ def get_client(server, user, password):
     )
     return client
 
+# Function to extract variables from the description field
 def extract_vars(description):
     vars_match = re.search(r'vars:\s*({.*})', description)
     if vars_match:
         return json.loads(vars_match.group(1))
     return {}
 
+# Function to get host-specific variables
 def get_host_vars(client, host):
     result = client._request(
         'host_show',
@@ -102,24 +104,7 @@ def get_host_vars(client, host):
         return extract_vars(description)
     return {}
 
-def get_group_members(hostgroup):
-    members = []
-    if 'member_host' in hostgroup:
-        members = [host for host in hostgroup['member_host']]
-    return members
-
-def get_group_children(hostgroup):
-    children = []
-    if 'member_hostgroup' in hostgroup:
-        children = hostgroup['member_hostgroup']
-    return children
-
-def get_group_vars(description):
-    vars_match = re.search(r'vars:\s*({.*})', description)
-    if vars_match:
-        return json.loads(vars_match.group(1))
-    return {}
-
+# Function to get hostgroup variables
 def get_hostgroup_vars(client, hostgroup):
     result = client._request(
         'hostgroup_show',
@@ -129,38 +114,35 @@ def get_hostgroup_vars(client, hostgroup):
     group_vars = {}
     if 'description' in result:
         description = result['description'][0]
-        group_vars.update(get_group_vars(description))
+        group_vars.update(extract_vars(description))
         if 'member_hostgroup' in result:
             for child_hostgroup in result['member_hostgroup']:
                 child_vars = get_hostgroup_vars(client, child_hostgroup)
                 group_vars.update(child_vars)
     return group_vars
 
+# Function to get inventory
 def get_inventory(client):
-    inventory = {}
-    hostvars = {}
     result = client._request(
         'hostgroup_find',
         '',
         {'all': True, 'raw': False}
     )['result']
+
+    inventory = {
+        hostgroup['cn'][0]: {
+            'hosts': hostgroup.get('member_host', []),
+            'children': hostgroup.get('member_hostgroup', []),
+            'vars': get_hostgroup_vars(client, hostgroup['cn'][0])
+        }
+        for hostgroup in result
+    }
+
+    hostvars = {}
     for hostgroup in result:
         group_vars = get_hostgroup_vars(client, hostgroup['cn'][0])
-        inventory[hostgroup['cn'][0]] = {
-            'hosts': get_group_members(hostgroup),
-            'children': get_group_children(hostgroup),
-            'vars': group_vars
-        }
-        # Merge group vars with parent group vars, giving precedence to group vars
-        parent = hostgroup.get('ipahostgroupmemberof', [])
-        while parent:
-            parent_group = parent.pop(0).split('=', 1)[1]
-            if parent_group in inventory:
-                parent_vars = inventory[parent_group].get('vars', {})
-                parent = parent + inventory[parent_group].get('ipahostgroupmemberof', [])
-                parent_vars.update(group_vars)
-                group_vars = parent_vars
-        for host in inventory[hostgroup['cn'][0]]['hosts']:
+
+        for host in hostgroup.get('member_host', []):
             if host not in hostvars:
                 hostvars[host] = {}
             host_vars = get_host_vars(client, host)
@@ -174,6 +156,7 @@ def get_inventory(client):
 
 
 
+# Main function
 def main():
     args = get_args()
 
@@ -208,7 +191,7 @@ def main():
     if not freeipapassword:
         exit("HALT: No FreeIPA password set")
 
-    client = get_client(freeipaserver, freeipauser, freeipapassword)
+    client = get_client(freeipaserver, freeipauser, freeipapassword, args.ipaversion)
 
     if args.host:
         result_vars = get_host_vars(client, args.host)
@@ -218,8 +201,7 @@ def main():
         print(inv_string)
     else:
         # For debugging
-        print("%s:%s@%s" %
-              (freeipauser, freeipapassword, freeipaserver))
+        print(f"{freeipauser}:{freeipapassword}@{freeipaserver}")
 
 if __name__ == '__main__':
     main()
