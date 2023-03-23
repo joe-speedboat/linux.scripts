@@ -1,0 +1,18 @@
+- hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+  - set_fact:
+      mykey: "custom1"
+
+  - set_fact:
+      "{{ 'task_dir_' + mykey }}": "my value"
+
+  - debug:
+      msg: "{{ vars['task_dir_' + mykey] }}"
+
+  - set_fact:
+      var2: "{{ vars['task_dir_' + mykey] }}"
+
+  - debug: var=var2
+
