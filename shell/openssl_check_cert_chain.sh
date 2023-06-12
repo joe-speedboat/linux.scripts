@@ -48,4 +48,4 @@ awk -F'\n' '
     ' "${chain_pem}"
 
 echo
-openssl verify -untrusted "${chain_pem}" "${chain_pem}"
+openssl verify -CAfile "${chain_pem}" -untrusted "${chain_pem}" "${chain_pem}"
