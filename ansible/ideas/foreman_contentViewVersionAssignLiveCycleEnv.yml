@@ -1,0 +1,99 @@
+---
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+    foremanUser: 'your_username'
+    foremanPassword: 'your_password'
+    foremanUrl: 'your_foreman_url'
+    contentViewName: 'your_content_view_name'
+    lifecycleEnvironmentName: 'your_lifecycle_environment_name'
+  tasks:
+    - name: Create a session
+      uri:
+        url: "{{ foremanUrl }}/users/login"
+        method: POST
+        body:
+          login: "{{ foremanUser }}"
+          password: "{{ foremanPassword }}"
+        body_format: form-urlencoded
+        return_content: yes
+        status_code: 200
+      register: loginResult
+      no_log: true
+
+    - set_fact:
+        sessionId: "{{ loginResult.cookies['_session_id'] }}"
+
+    - name: Get the content view ID
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_views"
+        method: GET
+        headers:
+          Cookie: "_session_id={{ sessionId }}"
+        return_content: yes
+        body_format: json
+        status_code: 200
+      register: contentViewResult
+    - set_fact:
+        contentViewId: "{{ item.id }}"
+      with_items: "{{ contentViewResult.json.results }}"
+      when: item.name == contentViewName
+
+    - name: Get the lifecycle environment ID
+      uri:
+        url: "{{ foremanUrl }}/katello/api/environments"
+        method: GET
+        headers:
+          Cookie: "_session_id={{ sessionId }}"
+        return_content: yes
+        body_format: json
+        status_code: 200
+      register: lifecycleEnvironmentResult
+    - set_fact:
+        lifecycleEnvironmentId: "{{ item.id }}"
+      with_items: "{{ lifecycleEnvironmentResult.json.results }}"
+      when: item.name == lifecycleEnvironmentName
+
+    - name: Promote a content view to a lifecycle environment
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_view_versions/{{ contentViewId }}/promote"
+        method: POST
+        headers:
+          Cookie: "_session_id={{ sessionId }}"
+        body:
+          id: "{{ contentViewId }}"
+          environment_id: "{{ lifecycleEnvironmentId }}"
+        body_format: json
+        status_code: 202
+      register: promoteTask
+
+    - name: Poll until promote task is complete
+      uri:
+        url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ promoteTask.json.id }}"
+        method: GET
+        headers:
+          Cookie: "_session_id={{ sessionId }}"
+        return_content: yes
+        body_format: json
+      register: taskResult
+      until: taskResult.json.state == 'stopped'
+      retries: 30
+      delay: 10
+
+    - name: Log out (end the session)
+      uri:
+        url: "{{ foremanUrl }}/users/logout"
+        method: GET
+        headers:
+          Cookie: "_session_id={{ sessionId }}"
+        status_code: 200
+      no_log: true
+...
