@@ -6,41 +6,29 @@
 # FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
-
----
+#
+# Foreman API DOC: https://foreman.domain.tld/apidoc
+# 
 - hosts: localhost
   gather_facts: no
   vars:
-    foremanUser: 'your_username'
-    foremanPassword: 'your_password'
-    foremanUrl: 'your_foreman_url'
-    contentViewName: 'your_content_view_name'
+    validate_certs: False
+    foremanUser: 'foreman_admin'
+    foremanPassword: 'xxxxxx'
+    foremanUrl: 'https://foreman.domain.tld'
+    contentViewName: 'cv_rhel9'
   tasks:
-    - name: Create a session
-      uri:
-        url: "{{ foremanUrl }}/users/login"
-        method: POST
-        body:
-          login: "{{ foremanUser }}"
-          password: "{{ foremanPassword }}"
-        body_format: form-urlencoded
-        return_content: yes
-        status_code: 200
-      register: loginResult
-      no_log: true
-
-    - set_fact:
-        sessionId: "{{ loginResult.cookies['_session_id'] }}"
-
     - name: Get the content view ID
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
         method: GET
-        headers:
-          Cookie: "_session_id={{ sessionId }}"
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
         return_content: yes
         body_format: json
         status_code: 200
+        validate_certs: "{{ validate_certs }}"
       register: contentViewResult
     - set_fact:
         contentViewId: "{{ item.id }}"
@@ -51,31 +39,26 @@
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views/{{ contentViewId }}/publish"
         method: POST
-        headers:
-          Cookie: "_session_id={{ sessionId }}"
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
         body_format: json
         status_code: 202
+        validate_certs: "{{ validate_certs }}"
       register: publishTask
 
     - name: Poll until publish task is complete
       uri:
         url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ publishTask.json.id }}"
         method: GET
-        headers:
-          Cookie: "_session_id={{ sessionId }}"
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
         return_content: yes
         body_format: json
+        validate_certs: "{{ validate_certs }}"
       register: taskResult
       until: taskResult.json.state == 'stopped'
       retries: 30
       delay: 10
-
-    - name: Log out (end the session)
-      uri:
-        url: "{{ foremanUrl }}/users/logout"
-        method: GET
-        headers:
-          Cookie: "_session_id={{ sessionId }}"
-        status_code: 200
-      no_log: true
 ...

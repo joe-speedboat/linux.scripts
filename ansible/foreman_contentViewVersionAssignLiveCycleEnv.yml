@@ -1,0 +1,106 @@
+---
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+#
+# Foreman API DOC: https://foreman.domain.tld/apidoc
+#
+- hosts: localhost
+  gather_facts: no
+  vars:
+    foremanCvPromoteForce: True
+    validate_certs: False
+    foremanUser: 'foreman_admin'
+    foremanPassword: 'xxxxxx'
+    foremanUrl: 'https://foreman.domain.tld'
+    contentViewName: 'cv_rhel9'
+    contentViewVersion: '4.0'
+    lifecycleEnvironmentName: 'LcTest'
+  tasks:
+    - name: Get the content view ID
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_views"
+        method: GET
+        return_content: yes
+        body_format: json
+        status_code: 200
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: contentViewResult
+    - set_fact:
+        contentViewId: "{{ item.id }}"
+      with_items: "{{ contentViewResult.json.results }}"
+      when: item.name == contentViewName
+
+    - name: Get the specific content view version ID
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_views/{{ contentViewId }}/content_view_versions"
+        method: GET
+        return_content: yes
+        body_format: json
+        status_code: 200
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: contentViewVersionsResult
+    - set_fact:
+        contentViewVersionId: "{{ item.id }}"
+      with_items: "{{ contentViewVersionsResult.json.results }}"
+      when: item.version == contentViewVersion
+
+    - name: Get the lifecycle environment ID
+      uri:
+        url: "{{ foremanUrl }}/katello/api/environments"
+        method: GET
+        return_content: yes
+        body_format: json
+        status_code: 200
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: lifecycleEnvironmentResult
+    - set_fact:
+        lifecycleEnvironmentId: "{{ item.id }}"
+      with_items: "{{ lifecycleEnvironmentResult.json.results }}"
+      when: item.name == lifecycleEnvironmentName
+
+    - name: Promote a content view version to a lifecycle environment
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_view_versions/{{ contentViewVersionId }}/promote"
+        method: POST
+        body:
+          id: "{{ contentViewVersionId }}"
+          environment_ids: "{{ lifecycleEnvironmentId }}"
+          force: "{{ foremanCvPromoteForce }}"
+        body_format: json
+        status_code: 202
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: promoteTask
+
+    - name: Poll until promote task is complete
+      uri:
+        url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ promoteTask.json.id }}"
+        method: GET
+        return_content: yes
+        body_format: json
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: taskResult
+      until: taskResult.json.state == 'stopped'
+      retries: 30
+      delay: 10
+...
+
