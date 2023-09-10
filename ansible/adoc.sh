@@ -19,7 +19,7 @@ ARG="$*"
 
 do-search(){
    ansible-doc $ARG 2>/tmp/.adoc.tmp
-   grep -q 'not found in:' /tmp/.adoc.tmp || exit 0
+   grep -q ' not found' /tmp/.adoc.tmp || exit 0
    FILES="$(ansible-doc -lj 2>/dev/null | sed -e 's/^[ \t]*//;1d;$d;s/[,"]//g;s/[ ]+?//g' | grep -i $ARG | tr ' ' '°' )"
    COUNT=$(echo "$FILES" | wc -w)
    if [ $COUNT -eq 0 ] ; then
