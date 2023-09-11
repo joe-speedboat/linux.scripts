@@ -5,6 +5,8 @@
 EVENT_NAME="OOO"
 # Define the mail domain to search for
 MAILDOM="acme.com"
+# Define the regex filter to select the mailboxes to search for
+MAILBOX_TO_SEARCH='^team....@'
 # If such an event is found, it sets the out-of-office reply for that mailbox.
 # If the event has a description, it uses that as the out-of-office message, otherwise it uses a default message.
 # USAGE: Run this script without any arguments. It requires zmprov and zmmailbox utilities to be available in the PATH.
@@ -36,7 +38,7 @@ eMail: elvira@acme.com"
 
 # GET ALL MAILBOXES FOR DOMAIN                        FILTER ALIASES ONLY     EXTRACT MAIL     FILTER ACCOUNTS WITH REGEX
 # Get all mailboxes for the domain, filter aliases only, extract mail, filter accounts with regex
-zmprov sa -v zimbraMailDeliveryAddress="*@$MAILDOM" | grep zimbraMailAlias  | sed 's/.*: //' | egrep '^team....@'          | while read mb
+zmprov sa -v zimbraMailDeliveryAddress="*@$MAILDOM" | grep zimbraMailAlias  | sed 's/.*: //' | egrep "$MAILBOX_TO_SEARCH"          | while read mb
 do
   echo "---------- $mb"  # SEARCH FOR TOMORROW ALL DAY EVENTS                            SELECT EVENTS WITH NAME "OOO"
   # Search for tomorrow all day events, select events with name "OOO"
