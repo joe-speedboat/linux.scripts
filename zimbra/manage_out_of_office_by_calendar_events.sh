@@ -1,6 +1,8 @@
 #!/bin/bash
 # DESC: This script controls out-of-office replies based on calendar entries.
-# It searches for all-day events named "OOO" for the next day in all mailboxes of the domain.
+# It searches for all-day events named by the variable EVENT_NAME for the next day in all mailboxes of the domain.
+# Define the name of the event to search for
+EVENT_NAME="OOO"
 # If such an event is found, it sets the out-of-office reply for that mailbox.
 # If the event has a description, it uses that as the out-of-office message, otherwise it uses a default message.
 # USAGE: Run this script without any arguments. It requires zmprov and zmmailbox utilities to be available in the PATH.
@@ -36,7 +38,7 @@ zmprov sa -v zimbraMailDeliveryAddress="*@acme.com" | grep zimbraMailAlias  | se
 do
   echo "---------- $mb"  # SEARCH FOR TOMORROW ALL DAY EVENTS                            SELECT EVENTS WITH NAME "OOO"
   # Search for tomorrow all day events, select events with name "OOO"
-  read OOO < <(zmmailbox -v -z -m $mb getAppointmentSummaries +1day +1day | jq -r '.[] | select(.name=="OOO") .name + ":" + .fragment')
+  read OOO < <(zmmailbox -v -z -m $mb getAppointmentSummaries +1day +1day | jq -r '.[] | select(.name=="'$EVENT_NAME'") .name + ":" + .fragment')
   # If an "OOO" event is found
   if [ $(echo "$OOO" | cut -d: -f1 | wc -c) -gt 5 ]
   then
