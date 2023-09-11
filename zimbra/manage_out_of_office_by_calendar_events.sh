@@ -1,5 +1,9 @@
 #!/bin/bash
-# DESC: control out_of_office answers with calendar entries.
+# DESC: This script controls out-of-office replies based on calendar entries.
+# It searches for all-day events named "OOO" for the next day in all mailboxes of the domain.
+# If such an event is found, it sets the out-of-office reply for that mailbox.
+# If the event has a description, it uses that as the out-of-office message, otherwise it uses a default message.
+# USAGE: Run this script without any arguments. It requires zmprov and zmmailbox utilities to be available in the PATH.
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
 # This software is licensed to you under the GNU General Public License.
@@ -11,10 +15,12 @@
 
 #/bin/bash
 
+# Set locale to English
 unset LC_ALL
 export LC_ALL=en_US.UTF-8
 export LANG=en_US
 
+# Default out-of-office message
 OOO_MSG="Dear Sir or Madam,
 
 Thank you for your message!
@@ -25,13 +31,17 @@ eMail: elvira@acme.com"
 
 
 # GET ALL MAILBOXES FOR DOMAIN                        FILTER ALIASES ONLY     EXTRACT MAIL     FILTER ACCOUNTS WITH REGEX
+# Get all mailboxes for the domain, filter aliases only, extract mail, filter accounts with regex
 zmprov sa -v zimbraMailDeliveryAddress="*@acme.com" | grep zimbraMailAlias  | sed 's/.*: //' | egrep '^team....@'          | while read mb
 do
   echo "---------- $mb"  # SEARCH FOR TOMORROW ALL DAY EVENTS                            SELECT EVENTS WITH NAME "OOO"
+  # Search for tomorrow all day events, select events with name "OOO"
   read OOO < <(zmmailbox -v -z -m $mb getAppointmentSummaries +1day +1day | jq -r '.[] | select(.name=="OOO") .name + ":" + .fragment')
+  # If an "OOO" event is found
   if [ $(echo "$OOO" | cut -d: -f1 | wc -c) -gt 5 ]
   then
     echo "INFO: Found OOO event"
+    # If the "OOO" event has a description
     if [ $(echo "$OOO" | cut -d: -f2 | wc -c) -gt 5 ]
     then
       echo "INFO: Found custom OOO message"
@@ -40,9 +50,12 @@ do
       echo "INFO: Found no OOO message, use default one"
     fi
     echo "WARNING: Configure OOO for USER $mb"
+    # Set the out-of-office reply for the mailbox
     zmprov ma $mb zimbraPrefOutOfOfficeReply "$OOO_MSG"
     zmprov ma $mb zimbraPrefOutOfOfficeReplyEnabled TRUE
+    # Set the start date for the out-of-office reply
     zmprov ma $mb zimbraPrefOutOfOfficeFromDate $(date "+%Y%m%d000000Z")
+    # Set the end date for the out-of-office reply
     zmprov ma $mb zimbraPrefOutOfOfficeUntilDate $(date -d "+1 day" "+%Y%m%d215959Z")
   else
     echo "INFO: Found no OOO event"
