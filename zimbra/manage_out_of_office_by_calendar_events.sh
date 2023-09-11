@@ -5,20 +5,8 @@
 # It must run as zimbra user and since it turns on OOO for one day, eg: today 0:00 -> tomorrow 22:00, it must run on a daily base before 22:00
 # My advice: run it daily at: 20:00
 
-# USE WITH CAUTION #########################################
-# If you use this for human users, it will override any configured OOO setting if they use any in "Settings > OOO"
-# Since this event query to get the appointment is verry short and robust, it does not see linebreaks. So this script translates ". " into line-breaks
-# So the Calendar Event Text:
-#    Dear Sir or Madam,
-#    Thank you for your message!
-#    I will be back soon, please write me later.
-#    Thanks, Chris
-# zmmailbox will see:
-#    Dear Sir or Madam, Thank you for your message! I will be back soon, please write me later. Thanks, Chris
-# so the script will translate this into a oneliner, sad.
-# but if you look closer:
-# 3 underscores and any following whitespaces get translated into linebreak
-# so just add ___ before each linebreak and it works ad needed
+# USE WITH CAUTION:
+#   If you use this for human users, it will override any configured OOO setting if they use any in "Settings > OOO"
 
 # WHY ######################################################
 # I am doing Zimbra for almost 13 years and still miss the "Family Maibox" feature, which got removed some day
@@ -59,26 +47,28 @@ The recipient of this mailbox is absent.
 In urgent cases please contact our helpdesk:
 eMail: elvira@acme.com"
 
-
 # GET ALL MAILBOXES FOR DOMAIN                        FILTER ALIASES ONLY     EXTRACT MAIL     FILTER ACCOUNTS WITH REGEX
 # Get all mailboxes for the domain, filter aliases only, extract mail, filter accounts with regex
 zmprov sa -v zimbraMailDeliveryAddress="*@$MAILDOM" | grep zimbraMailAlias  | sed 's/.*: //' | egrep "$MAILBOX_TO_SEARCH"          | while read mb
 do
   echo "---------- $mb"  # SEARCH FOR TOMORROW ALL DAY EVENTS                            SELECT EVENTS WITH NAME "OOO"
   # Search for tomorrow all day events, select events with name "OOO"
-  read OOO < <(zmmailbox -v -z -m $mb getAppointmentSummaries +1day +1day | jq -r '.[] | select(.name=="'$EVENT_NAME'") .name + ":" + .fragment')
+  read OOO < <(zmmailbox -v -z -m $mb getAppointmentSummaries +1day +1day | jq -r '.[] | select(.name=="'$EVENT_NAME'") .name + ":" + .id + ":" + .fragment')
   # If an "OOO" event is found
-  if [ $(echo "$OOO" | cut -d: -f1 | wc -c) -gt 5 ]
+  if echo "$OOO" | cut -d: -f1 | egrep -q "^$EVENT_NAME$"
   then
     echo "INFO: Found OOO event"
     # If the "OOO" event has a description
-    if [ $(echo "$OOO" | cut -d: -f2 | wc -c) -gt 5 ]
+    if [ $(echo "$OOO" | cut -d: -f3- | wc -c) -gt 10 ]
     then
       echo "INFO: Found custom OOO message"
-      OOO_MSG="$(echo $OOO | cut -d: -f2 | sed 's/___[[:space:]]\{1,\}/\n/g' )"
+      id=$(echo "$OOO" | cut -d: -f2)
+      response=$(zmsoap -z -m $mb GetAppointmentRequest id=$id)
+      OOO_MSG=$(echo "$response" | awk 'BEGIN{RS="<desc>|</desc>"} NR==2{print $0}')
     else
       echo "INFO: Found no OOO message, use default one"
     fi
+    echo "OOO_MSG: $OOO_MSG"
     echo "WARNING: Configure OOO for USER $mb"
     # Set the out-of-office reply for the mailbox
     zmprov ma $mb zimbraPrefOutOfOfficeReply "$OOO_MSG"
@@ -91,3 +81,4 @@ do
     echo "INFO: Found no OOO event"
   fi
 done
+
