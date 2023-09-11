@@ -1,5 +1,45 @@
 #!/bin/bash
 # DESC: This script controls out-of-office replies based on calendar entries.
+
+# USAGE: Run this script without any arguments. It requires zmprov and zmmailbox utilities to be available in the PATH.
+# It must run as zimbra user and since it turns on OOO for one day, eg: today 0:00 -> tomorrow 22:00, it must run on a daily base before 22:00
+# My advice: run it daily at: 20:00
+
+# USE WITH CAUTION #########################################
+# If you use this for human users, it will override any configured OOO setting if they use any in "Settings > OOO"
+# Since this event query to get the appointment is verry short and robust, it does not see linebreaks. So this script translates ". " into line-breaks
+# So the Calendar Event Text:
+#    Dear Sir or Madam,
+#    Thank you for your message!
+#    I will be back soon, please write me later.
+#    Thanks, Chris
+# zmmailbox will see:
+#    Dear Sir or Madam, Thank you for your message! I will be back soon, please write me later. Thanks, Chris
+# so the script will translate this into a oneliner, sad.
+# but if you look closer:
+# 3 underscores and any following whitespaces get translated into linebreak
+# so just add ___ before each linebreak and it works ad needed
+
+# WHY ######################################################
+# I am doing Zimbra for almost 13 years and still miss the "Family Maibox" feature, which got removed some day
+# Driven by this need, we manually share the mailboxes and personas of a "Team Mailbox", which is a normal Mailbox, just representing the team
+# Sadly, team members can not control the ooo messages of this team mailboxes, which where maintainable in good old days of FamilyMailboxes
+# Parttime workers, which have same day off every week, can use this feature as well.
+
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv3
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+
+# Set locale to English
+unset LC_ALL
+export LC_ALL=en_US.UTF-8
+export LANG=en_US
+
 # It searches for all-day events named by the variable EVENT_NAME for the next day in all mailboxes of the domain.
 # Define the name of the event to search for
 EVENT_NAME="OOO"
@@ -9,22 +49,6 @@ MAILDOM="acme.com"
 MAILBOX_TO_SEARCH='^team....@'
 # If such an event is found, it sets the out-of-office reply for that mailbox.
 # If the event has a description, it uses that as the out-of-office message, otherwise it uses a default message.
-# USAGE: Run this script without any arguments. It requires zmprov and zmmailbox utilities to be available in the PATH.
-# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
-
-# This software is licensed to you under the GNU General Public License.
-# There is NO WARRANTY for this software, express or
-# implied, including the implied warranties of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
-# along with this software; if not, see
-# http://www.gnu.org/licenses/gpl.txt
-
-#/bin/bash
-
-# Set locale to English
-unset LC_ALL
-export LC_ALL=en_US.UTF-8
-export LANG=en_US
 
 # Default out-of-office message
 OOO_MSG="Dear Sir or Madam,
@@ -51,7 +75,7 @@ do
     if [ $(echo "$OOO" | cut -d: -f2 | wc -c) -gt 5 ]
     then
       echo "INFO: Found custom OOO message"
-      OOO_MSG="$(echo $OOO | cut -d: -f2 | sed 's#\. #.\n#g' )"
+      OOO_MSG="$(echo $OOO | cut -d: -f2 | sed 's/___[[:space:]]\{1,\}/\n/g' )"
     else
       echo "INFO: Found no OOO message, use default one"
     fi
