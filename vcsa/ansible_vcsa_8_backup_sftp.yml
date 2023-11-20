@@ -102,7 +102,7 @@
           Accept: "application/json"
         return_content: yes
       register: progress_response
-      until: progress_response.json.value.state != "INPROGRESS"
+      until: progress_response.json.value.state == "SUCCEEDED" 
       retries: 30
       delay: 30
 
