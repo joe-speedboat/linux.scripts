@@ -28,6 +28,7 @@
     - name: create backup user {{ backup_user }} on server {{ backup_server }}
       user:
         name: "{{ backup_user }}"
+        home: "{{ backup_folder }}"
         comment: vCenterBackup
         update_password: always
         password: "{{ backup_password | password_hash('sha512') }}"
