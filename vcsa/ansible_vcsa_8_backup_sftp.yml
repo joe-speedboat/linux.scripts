@@ -1,0 +1,140 @@
+---
+- name: VCSA SFTP Backup
+  hosts: localhost
+  vars:
+    vc_address: 'vcenter01.domain.local'
+    vc_user: '{{ ansible_user }}@domain.local'
+    vc_password: '{{ ansible_password }}'
+    backup_server_ip: "1.2.3.4"                     # ip of sftp target, vcenter dns sometimes does not work properly
+    backup_server: "filebackup01"                   # sftp target & ansible delegate_to (inventory_hostname)
+    backup_user: 'vcenter01'                        # sftp target
+    backup_folder: "/srv/backup/{{ backup_user }}"  # where to store on sftp target
+    backup_keep: 3                                  # delete backups on sftp target
+    backup_min_size_gb: 5                           # fail if backup size is lower on sftp target
+  tasks:
+    - name: Generate new random password for vcenter backup transfer user
+      set_fact:
+        backup_password: "{{ lookup('password', '/dev/null length=20 chars=ascii_lowercase,digits,,.:-_=+;<>') }}"
+
+    - name: create backup user {{ backup_user }} on server {{ backup_server }}
+      user:
+        name: "{{ backup_user }}"
+        comment: vCenterBackup
+        update_password: always
+        password: "{{ backup_password | password_hash('sha512') }}"
+      delegate_to: "{{ backup_server }}"
+      become: True
+      vars:
+        ansible_connection: ssh
+
+    - name: Create date pattern
+      set_fact:
+        mydate: "{{ lookup('pipe', 'date +%Y-%m-%d-%H-%M-%S') }}"
+
+    - name: Create Backup Folder
+      file:
+        path: "{{ backup_folder }}/{{ mydate }}"
+        state: directory
+      delegate_to: "{{ backup_server }}"
+      become: True
+      vars:
+        ansible_connection: ssh
+        ansible_become_user: "{{ backup_user }}"
+
+    - name: Authenticate with VCSA
+      uri:
+        url: "https://{{ vc_address }}/rest/com/vmware/cis/session"
+        method: POST
+        validate_certs: no
+        force_basic_auth: yes
+        user: "{{ vc_user }}"
+        password: "{{ vc_password }}"
+        return_content: yes
+      register: login
+
+    - name: Create a message body for the backup request
+      copy:
+        dest: "/tmp/task.json"
+        content: |
+          {
+            "piece":
+              {
+                "location_type": "SFTP",
+                "comment": "Ansible backup",
+                "parts": ["seat", "common"],
+                "location": "sftp://{{ backup_server_ip }}{{ backup_folder }}/{{ mydate }}",
+                "location_user": "{{ backup_user }}",
+                "location_password": "{{ backup_password }}"
+              }
+          }
+
+    - name: Issue a request to start the backup operation
+      uri:
+        url: "https://{{ vc_address }}/rest/appliance/recovery/backup/job"
+        method: POST
+        validate_certs: no
+        headers:
+          vmware-api-session-id: "{{ login.json.value }}"
+          Accept: "application/json"
+          Content-Type: "application/json"
+        body: "{{ lookup('file', '/tmp/task.json') }}"
+        body_format: json
+        status_code: 200
+      register: backup_response
+
+    - name: Monitor progress of the backup operation
+      uri:
+        url: "https://{{ vc_address }}/rest/appliance/recovery/backup/job/{{ backup_response.json.value.id }}"
+        method: GET
+        validate_certs: no
+        headers:
+          vmware-api-session-id: "{{ login.json.value }}"
+          Accept: "application/json"
+        return_content: yes
+      register: progress_response
+      until: progress_response.json.value.state != "INPROGRESS"
+      retries: 30
+      delay: 30
+
+    - name: Clean up temporary files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/task.json"
+
+    - name: Look into backup folder to validate backup by size
+      find:
+        paths: "{{ backup_folder }}/{{ mydate }}"
+        file_type: file
+        recurse: yes
+      register: files_found
+      delegate_to: "{{ backup_server }}"
+      become: True
+      vars:
+        ansible_connection: ssh
+        ansible_become_user: "{{ backup_user }}"
+
+    - name: Calculate total size of files
+      set_fact:
+        total_size: "{{ files_found.files | map(attribute='size') | sum }}"
+
+    - name: Check if total size is less than 5GB
+      fail:
+        msg: "The total size is less than {{ backup_min_size_gb }} GB"
+      when: total_size < (backup_min_size_gb | int * 1024 * 1024 * 1024)
+
+    - name: Remove old backups if needed
+      shell: |
+        ls -1d {{ backup_folder }}/*-*-*-*-* | sort -n | head -n-{{ backup_keep }} | xargs -r rm -frv
+      register: cleanup_output
+      changed_when: cleanup_output.stdout != ""
+      delegate_to: "{{ backup_server }}"
+      become: True
+      vars:
+        ansible_connection: ssh
+        ansible_become_user: "{{ backup_user }}"
+
+    - name: print cleanup output
+      debug:
+        var: cleanup_output
