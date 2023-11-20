@@ -131,7 +131,7 @@
     - name: Check if total size is less than 5GB
       fail:
         msg: "The total size is less than {{ backup_min_size_gb }} GB"
-      when: total_size < (backup_min_size_gb | int * 1024 * 1024 * 1024)
+      when: total_size | int < (backup_min_size_gb | int * 1024 * 1024 * 1024)
 
     - name: Remove old backups if needed
       shell: |
@@ -146,4 +146,4 @@
 
     - name: print cleanup output
       debug:
-        var: cleanup_output
+        var: cleanup_output.stdout_lines
