@@ -126,7 +126,7 @@
 
     - name: Calculate total size of files
       set_fact:
-        total_size: "{{ files_found.files | map(attribute='size') | sum }}"
+        total_size: "{{ files_found.files | map(attribute='size') |  map('int') | sum }}"
 
     - name: Check if total size is less than 5GB
       fail:
