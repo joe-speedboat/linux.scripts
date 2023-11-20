@@ -129,10 +129,10 @@
       set_fact:
         total_size: "{{ files_found.files | map(attribute='size') |  map('int') | sum }}"
 
-    - name: Check if total size is less than 5GB
+    - name: Check if total size is less than {{ backup_min_size_mb }} MB
       fail:
-        msg: "The total size is less than {{ backup_min_size_gb }} GB"
-      when: total_size | int < (backup_min_size_gb | int * 1024 * 1024 * 1024)
+        msg: "The total size is less than {{ backup_min_size_mb }} MB"
+      when: total_size | int < (backup_min_size_mb | int * 1024 * 1024)
 
     - name: Remove old backups if needed
       shell: |
