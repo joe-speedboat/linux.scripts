@@ -32,6 +32,8 @@
         comment: vCenterBackup
         update_password: always
         password: "{{ backup_password | password_hash('sha512') }}"
+        password_lock: False
+        shell: /bin/bash
       delegate_to: "{{ backup_server }}"
       become: True
       vars:
@@ -102,9 +104,14 @@
           Accept: "application/json"
         return_content: yes
       register: progress_response
-      until: progress_response.json.value.state == "SUCCEEDED" 
+      until: progress_response.json.value.state != "INPROGRESS" 
       retries: 30
       delay: 30
+
+    - name: Fail if final state is not SUCCEEDED
+      fail:
+        msg: "Final backup state mus be SUCCEEDED, but it is {{ progress_response.json.value.state }}"
+      when: progress_response.json.value.state != "SUCCEEDED" 
 
     - name: Clean up temporary files
       file:
@@ -144,6 +151,16 @@
       vars:
         ansible_connection: ssh
         ansible_become_user: "{{ backup_user }}"
+
+    - name: lock backup user {{ backup_user }} on server {{ backup_server }}
+      user:
+        name: "{{ backup_user }}"
+        password_lock: True
+        shell: /bin/false
+      delegate_to: "{{ backup_server }}"
+      become: True
+      vars:
+        ansible_connection: ssh
 
     - name: print cleanup output
       debug:
