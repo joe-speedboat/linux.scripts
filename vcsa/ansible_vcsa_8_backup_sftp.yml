@@ -143,6 +143,9 @@
 
     - name: Remove old backups if needed
       shell: |
+        echo "INFO: Show current backup folders:"
+        du -hs {{ backup_folder }}/*-*-*-*-*
+        echo "WARN: Remove old backups:"
         ls -1d {{ backup_folder }}/*-*-*-*-* | sort -n | head -n-{{ backup_keep }} | xargs -r rm -frv
       register: cleanup_output
       changed_when: cleanup_output.stdout != ""
