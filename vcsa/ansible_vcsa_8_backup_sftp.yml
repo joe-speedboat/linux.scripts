@@ -11,15 +11,15 @@
 - name: VCSA SFTP Backup
   hosts: localhost
   vars:
-    vc_address: 'vcenter01.domain.local'
-    vc_user: '{{ ansible_user }}@domain.local'
-    vc_password: '{{ ansible_password }}'
+    vc_address: 'vcenter01.domain.local'            # vCenter API address
+    vc_user: '{{ ansible_user }}@domain.local'      # vcenter creds
+    vc_password: '{{ ansible_password }}'           # vcenter creds
     backup_server_ip: "1.2.3.4"                     # ip of sftp target, vcenter dns sometimes does not work properly
-    backup_server: "filebackup01"                   # sftp target & ansible delegate_to (inventory_hostname)
+    backup_server: "filebackup01"                   # sftp target: inventory_hostname
     backup_user: 'vcenter01'                        # sftp target
     backup_folder: "/srv/backup/{{ backup_user }}"  # where to store on sftp target
     backup_keep: 3                                  # delete backups on sftp target
-    backup_min_size_gb: 5                           # fail if backup size is lower on sftp target
+    backup_min_size_mb: 500                         # fail if backup size is lower on sftp target
   tasks:
     - name: Generate new random password for vcenter backup transfer user
       set_fact:
@@ -136,7 +136,7 @@
       set_fact:
         total_size: "{{ files_found.files | map(attribute='size') |  map('int') | sum }}"
 
-    - name: Check if total size is less than {{ backup_min_size_mb }} MB
+    - name: Fail if total size is less than {{ backup_min_size_mb }} MB
       fail:
         msg: "The total size is less than {{ backup_min_size_mb }} MB"
       when: total_size | int < (backup_min_size_mb | int * 1024 * 1024)
