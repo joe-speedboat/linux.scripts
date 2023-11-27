@@ -129,11 +129,20 @@ check_package_without_repos(){
 }
 
 check_reboot_required(){
-  if [ -f /var/run/reboot-required ]; then
-    log $reboot_required_report system needs a reboot
-  else
-    reboot_required_report=INFO
-    log $reboot_required_report system does not need a reboot
+  if [ "$(myos)" == "Debian" ]; then
+    if [ -f /var/run/reboot-required ]; then
+      log $reboot_required_report system needs a reboot
+    else
+      reboot_required_report=INFO
+      log $reboot_required_report system does not need a reboot
+    fi
+  elif [ "$(myos)" == "RHEL" ]; then
+    if needs-restarting -r >/dev/null; then
+      log $reboot_required_report system needs a reboot
+    else
+      reboot_required_report=INFO
+      log $reboot_required_report system does not need a reboot
+    fi
   fi
 }
 
