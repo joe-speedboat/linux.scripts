@@ -59,6 +59,7 @@ myos(){
     OS=$(uname -s)
   fi
   echo $OS
+}
 
 log info myos=$(myos)
 
