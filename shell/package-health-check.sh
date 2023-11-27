@@ -95,7 +95,7 @@ check_repo_error(){
     apt-get clean >/dev/null 2>&1
     apt-get update 2>&1 | grep -e ^E: -e ^W: -e ^Err: -e ^Warn: && ERR=1 || ERR=0
   else
-    yum clean all >/dev/null 2>&1 && yum makecache >/dev/null 2>&1
+    yum clean all 2>&1 >/dev/null && yum makecache 2>&1 >/dev/null
     ERR=$?
   fi
   if [ $ERR -eq 0 ]; then
@@ -116,7 +116,7 @@ check_package_without_repos(){
       log $package_without_repos_report some packages have no repos behind
     fi
   else
-    if ! yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') | grep -q '@System'; then
+    if ! yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') | grep '@System'; then
       package_without_repos_report=INFO
       log $package_without_repos_report all packages are depending on repos
     else
