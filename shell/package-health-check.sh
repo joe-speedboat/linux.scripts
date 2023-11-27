@@ -25,6 +25,7 @@ pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
 reboot_required_report=WARNING
+do_debug=0
 
 # Log function
 log(){
@@ -32,6 +33,9 @@ log(){
    DATE=$(date +%Y.%m.%d_%H:%M)
    UNAME=$(uname -n | cut -d. -f1)
    SCRIPT=$(basename $0)
+   if [ "$LEVEL" = "DEBUG" -a "$do_debug" -eq 1 ] ; then
+      echo "$DATE $UNAME $SCRIPT:$LEVEL: $*"
+   fi
    if [ "$LEVEL" = "ERROR" -o "$LEVEL" = "WARNING" -o "$LEVEL" = "INFO" ] ; then
       echo "$DATE $UNAME $SCRIPT:$LEVEL: $*"
       logger -t $SCRIPT "$LEVEL: $*"
@@ -61,7 +65,7 @@ myos(){
   echo $OS
 }
 
-log info myos=$(myos)
+log debug myos=$(myos)
 
 # Ensure OS is either Debian or RHEL
 OS=$(myos)
@@ -84,7 +88,7 @@ check_uptime(){
 
 # Check package install
 check_pkg_install(){
-  log info exec: check_pkg_install
+  log debug exec: check_pkg_install
   if [ "$(myos)" == "Debian" ]; then
     pkg_install_last=$(date -d "$(stat -c %y /var/lib/dpkg/info/*.list 2> /dev/null | sort | tail -n1)" +%s)
   else
@@ -99,16 +103,12 @@ check_pkg_install(){
 
 # Check repo error
 check_repo_error(){
-  log info exec: check_pkg_install
+  log debug exec: check_pkg_install
   if [ "$(myos)" == "Debian" ]; then
     apt-get clean >/dev/null 2>&1
-    {
       apt-get update 2>&1 | grep -e ^E: -e ^W: -e ^Err: -e ^Warn: && ERR=1 || ERR=0
-    } | sed 's/^/      /'
   else
-    {
       yum clean all 2>&1 >/dev/null && yum makecache 2>&1 >/dev/null
-    } | sed 's/^/      /'
     ERR=$?
   fi
   if [ $ERR -eq 0 ]; then
@@ -121,7 +121,7 @@ check_repo_error(){
 
 # Check package without repos
 check_package_without_repos(){
-  log info exec: check_package_without_repos
+  log debug exec: check_package_without_repos
   if [ "$(myos)" == "Debian" ]; then
     if ! dpkg -l | awk '{print $2}' | xargs apt-cache madison 2>&1 | grep -q 'No available version'; then
       package_without_repos_report=INFO
@@ -140,7 +140,7 @@ check_package_without_repos(){
 }
 
 check_reboot_required(){
-  log info exec: check_reboot_required
+  log debug exec: check_reboot_required
   if [ "$(myos)" == "Debian" ]; then
     if [ -f /var/run/reboot-required ]; then
       log $reboot_required_report system needs a reboot
