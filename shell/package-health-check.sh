@@ -24,7 +24,7 @@ pkg_install_max_d=90
 pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
-reboot_required_report=ERROR
+reboot_required_report=WARNING
 
 # Log function
 log(){
@@ -59,7 +59,8 @@ myos(){
     OS=$(uname -s)
   fi
   echo $OS
-}
+
+log info myos=$(myos)
 
 # Ensure OS is either Debian or RHEL
 OS=$(myos)
@@ -69,8 +70,10 @@ then
   exit 1
 fi
 
+
 # Check uptime
 check_uptime(){
+  log info exec: check_uptime
   uptime_has_d=$(awk '{print int($1/86400)}' /proc/uptime)
   if [ $uptime_has_d -lt $uptime_max_d ]; then
     uptime_report=INFO
@@ -80,6 +83,7 @@ check_uptime(){
 
 # Check package install
 check_pkg_install(){
+  log info exec: check_pkg_install
   if [ "$(myos)" == "Debian" ]; then
     pkg_install_last=$(date -d "$(stat -c %y /var/lib/dpkg/info/*.list 2> /dev/null | sort | tail -n1)" +%s)
   else
@@ -89,16 +93,21 @@ check_pkg_install(){
   if [ $pkg_install_last_d -lt $pkg_install_max_d ]; then
     pkg_install_report=INFO
   fi
-  log $pkg_install_report pkg_install_last_d=$pkg_install_last_d pkg_install_max_d=$pkg_install_max_d
+  log $pkg_install_report pkg_install_last_d=$pkg_install_last_d pkg_install_max_d=$pkg_install_max_d pkg_install_last=$pkg_install_last
 }
 
 # Check repo error
 check_repo_error(){
+  log info exec: check_pkg_install
   if [ "$(myos)" == "Debian" ]; then
     apt-get clean >/dev/null 2>&1
-    apt-get update 2>&1 | grep -e ^E: -e ^W: -e ^Err: -e ^Warn: && ERR=1 || ERR=0
+    {
+      apt-get update 2>&1 | grep -e ^E: -e ^W: -e ^Err: -e ^Warn: && ERR=1 || ERR=0
+    } | sed 's/^/      /'
   else
-    yum clean all 2>&1 >/dev/null && yum makecache 2>&1 >/dev/null
+    {
+      yum clean all 2>&1 >/dev/null && yum makecache 2>&1 >/dev/null
+    } | sed 's/^/      /'
     ERR=$?
   fi
   if [ $ERR -eq 0 ]; then
@@ -111,6 +120,7 @@ check_repo_error(){
 
 # Check package without repos
 check_package_without_repos(){
+  log info exec: check_package_without_repos
   if [ "$(myos)" == "Debian" ]; then
     if ! dpkg -l | awk '{print $2}' | xargs apt-cache madison 2>&1 | grep -q 'No available version'; then
       package_without_repos_report=INFO
@@ -129,6 +139,7 @@ check_package_without_repos(){
 }
 
 check_reboot_required(){
+  log info exec: check_reboot_required
   if [ "$(myos)" == "Debian" ]; then
     if [ -f /var/run/reboot-required ]; then
       log $reboot_required_report system needs a reboot
