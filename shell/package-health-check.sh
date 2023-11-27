@@ -24,6 +24,7 @@ pkg_install_max_d=90
 pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
+reboot_required_report=ERROR
 
 # Log function
 log(){
@@ -127,8 +128,18 @@ check_package_without_repos(){
   fi
 }
 
+check_reboot_required(){
+  if [ -f /var/run/reboot-required ]; then
+    log $reboot_required_report system needs a reboot
+  else
+    reboot_required_report=INFO
+    log $reboot_required_report system does not need a reboot
+  fi
+}
+
 # Run checks
 check_uptime
 check_pkg_install
 check_repo_error
 check_package_without_repos
+check_reboot_required
