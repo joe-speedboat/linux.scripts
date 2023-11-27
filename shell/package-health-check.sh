@@ -49,6 +49,8 @@ myos(){
       OS="Debian"
     elif [[ $ID_LIKE == *"rhel"* ]]; then
       OS="RHEL"
+    elif [[ $ID == *"rhel"* ]]; then
+      OS="RHEL"
     else
       OS=$NAME
     fi
