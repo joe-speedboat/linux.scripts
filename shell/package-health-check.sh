@@ -145,6 +145,7 @@ check_public_repo_ips() {
     log debug exec: check_public_repo_ips
     local repo_urls
     local ip
+    local public_ip_found=0
 
     if [ "$(myos)" == "Debian" ]; then
         repo_urls=$(grep -Eo "http[s]?://[^/]+" /etc/apt/sources.list /etc/apt/sources.list.d/*.list)
@@ -157,11 +158,12 @@ check_public_repo_ips() {
         if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
                 log $public_repo_ips_report "Public IP detected in repo: $url ($ip)"
+                public_ip_found=1
             fi
         fi
     done
 
-    if [ -z "$ip" ] || [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
+    if [ $public_ip_found -eq 0 ]; then
         public_repo_ips_report=INFO
         log $public_repo_ips_report "No public IPs detected in repos"
     fi
