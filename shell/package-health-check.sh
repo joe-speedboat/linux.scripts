@@ -150,7 +150,7 @@ check_reboot_required(){
       log $reboot_required_report system does not need a reboot
     fi
   elif [ "$(myos)" == "RHEL" ]; then
-    if ! needs-restarting -r 2>&1 | grep 'Reboot is required' ; then
+    if needs-restarting -r 2>&1 | grep 'Reboot is required' ; then
       log $reboot_required_report system needs a reboot
     else
       reboot_required_report=INFO
