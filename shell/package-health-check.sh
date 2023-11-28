@@ -32,7 +32,8 @@ log(){
    LEVEL=$(echo $1 | tr 'a-z' 'A-Z' ) ; shift
    DATE=$(date +%Y.%m.%d_%H:%M)
    UNAME=$(uname -n | cut -d. -f1)
-   SCRIPT=$(basename $0)
+   #SCRIPT=$(basename $0)
+   SCRIPT=package-health-check.sh
    if [ "$LEVEL" = "DEBUG" -a "$do_debug" -eq 1 ] ; then
       echo "$DATE $UNAME $SCRIPT:$LEVEL: $*"
    fi
@@ -78,7 +79,7 @@ fi
 
 # Check uptime
 check_uptime(){
-  log info exec: check_uptime
+  log debug exec: check_uptime
   uptime_has_d=$(awk '{print int($1/86400)}' /proc/uptime)
   if [ $uptime_has_d -lt $uptime_max_d ]; then
     uptime_report=INFO
@@ -98,7 +99,7 @@ check_pkg_install(){
   if [ $pkg_install_last_d -lt $pkg_install_max_d ]; then
     pkg_install_report=INFO
   fi
-  log $pkg_install_report pkg_install_last_d=$pkg_install_last_d pkg_install_max_d=$pkg_install_max_d pkg_install_last=$pkg_install_last
+  log $pkg_install_report pkg_install_last_d=$pkg_install_last_d pkg_install_max_d=$pkg_install_max_d pkg_install_last=$(date -d @$pkg_install_last "+%Y.%m.%d")
 }
 
 # Check repo error
