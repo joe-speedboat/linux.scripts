@@ -24,6 +24,7 @@ pkg_install_max_d=90
 pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
+public_repo_ips_report=WARNING
 reboot_required_report=WARNING
 do_debug=0
 
@@ -140,6 +141,32 @@ check_package_without_repos(){
   fi
 }
 
+check_public_repo_ips() {
+    log debug exec: check_public_repo_ips
+    local repo_urls
+    local ip
+
+    if [ "$(myos)" == "Debian" ]; then
+        repo_urls=$(grep -Eo "http[s]?://[^/]+" /etc/apt/sources.list /etc/apt/sources.list.d/*.list)
+    else
+        repo_urls=$(grep -Eo "http[s]?://[^/]+" /etc/yum.repos.d/*.repo)
+    fi
+
+    for url in $repo_urls; do
+        ip=$(dig +short $(echo $url | sed -e 's|^[^/]*//||' -e 's|/.*$||'))
+        if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
+                log $public_repo_ips_report "Public IP detected in repo: $url ($ip)"
+            fi
+        fi
+    done
+
+    if [ -z "$ip" ] || [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
+        public_repo_ips_report=INFO
+        log $public_repo_ips_report "No public IPs detected in repos"
+    fi
+}
+
 check_reboot_required(){
   log debug exec: check_reboot_required
   if [ "$(myos)" == "Debian" ]; then
@@ -159,9 +186,11 @@ check_reboot_required(){
   fi
 }
 
+
 # Run checks
 check_uptime
 check_pkg_install
 check_repo_error
 check_package_without_repos
+check_public_repo_ips
 check_reboot_required
