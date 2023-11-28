@@ -26,7 +26,7 @@ repo_error_report=ERROR
 package_without_repos_report=ERROR
 public_repo_ips_report=WARNING
 reboot_required_report=WARNING
-do_debug=0
+do_debug=1
 
 # Log function
 log(){
@@ -155,6 +155,7 @@ check_public_repo_ips() {
 
     for url in $repo_urls; do
         ip=$(dig +short $(echo $url | sed -e 's|^[^/]*//||' -e 's|/.*$||'))
+        log debug "Checking repo URL: $url, resolved IP: $ip"
         if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
                 log $public_repo_ips_report "Public IP detected in repo: $url ($ip)"
