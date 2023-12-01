@@ -162,6 +162,8 @@ check_public_repos() {
                 log $public_repos_report "Public IP detected in repo: $url ($ip)"
                 public_ip_found=1
             fi
+        else
+            log info "Repo: $url has no ip, skipping"
         fi
     done
 
