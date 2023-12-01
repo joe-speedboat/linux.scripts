@@ -157,7 +157,7 @@ check_public_repos() {
         fqdn=$(echo $url | sed -e 's|^[^/]*//||' -e 's|/.*$||')
         ip=$(getent hosts $fqdn 2>&1 | cut -d' ' -f1 | head -n1)
         log debug "Checking repo FQDN: $fqdn, resolved IP: $ip"
-        if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ -a "x$ip" != "x" ]]; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
                 log $public_repos_report "Public IP detected in repo: $url ($ip)"
                 public_ip_found=1
