@@ -24,7 +24,7 @@ pkg_install_max_d=90
 pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
-public_repo_ips_report=WARNING
+public_repos_report=WARNING
 reboot_required_report=WARNING
 do_debug=1
 
@@ -105,7 +105,7 @@ check_pkg_install(){
 
 # Check repo error
 check_repo_error(){
-  log debug exec: check_pkg_install
+  log debug exec: check_repo_error
   if [ "$(myos)" == "Debian" ]; then
     apt-get clean >/dev/null 2>&1
       apt-get update 2>&1 | grep -e ^E: -e ^W: -e ^Err: -e ^Warn: && ERR=1 || ERR=0
@@ -141,8 +141,8 @@ check_package_without_repos(){
   fi
 }
 
-check_public_repo_ips() {
-    log debug exec: check_public_repo_ips
+check_public_repos() {
+    log debug exec: check_public_repos
     local repo_urls
     local ip
     local public_ip_found=0
@@ -154,19 +154,19 @@ check_public_repo_ips() {
     fi
 
     for url in $repo_urls; do
-        ip=$(dig +short $(echo $url | sed -e 's|^[^/]*//||' -e 's|/.*$||'))
+        ip=$(getent hosts $(echo $url | sed -e 's|^[^/]*//||' -e 's|/.*$||') | cut -d' ' -f1)
         log debug "Checking repo URL: $url, resolved IP: $ip"
         if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
-                log $public_repo_ips_report "Public IP detected in repo: $url ($ip)"
+                log $public_repos_report "Public IP detected in repo: $url ($ip)"
                 public_ip_found=1
             fi
         fi
     done
 
     if [ $public_ip_found -eq 0 ]; then
-        public_repo_ips_report=INFO
-        log $public_repo_ips_report "No public IPs detected in repos"
+        public_repos_report=INFO
+        log $public_repos_report "No public IPs detected in repos"
     fi
 }
 
@@ -195,5 +195,5 @@ check_uptime
 check_pkg_install
 check_repo_error
 check_package_without_repos
-check_public_repo_ips
+check_public_repos
 check_reboot_required
