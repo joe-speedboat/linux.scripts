@@ -159,8 +159,10 @@ check_public_repos() {
         log debug "Checking repo FQDN: $fqdn, resolved IP: $ip"
         if [ "x$ip" != "x" ] ; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
-                log $public_repos_report "Public IP detected in repo: $url ($ip)"
+                log info "Public IP detected in repo: $url ($ip)"
                 public_ip_found=1
+            else
+                log debug  "Private IP detected in repo: $url ($ip)"
             fi
         else
             log info "Repo: $url has no ip, skipping"
@@ -170,7 +172,8 @@ check_public_repos() {
     if [ $public_ip_found -eq 0 ]; then
         public_repos_report=INFO
         log $public_repos_report "No public IPs detected in repos"
-    fi
+    else
+        log $public_repos_report "Public IPs detected in repos"
 }
 
 check_reboot_required(){
