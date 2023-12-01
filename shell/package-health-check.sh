@@ -174,6 +174,7 @@ check_public_repos() {
         log $public_repos_report "No public IPs detected in repos"
     else
         log $public_repos_report "Public IPs detected in repos"
+    fi
 }
 
 check_reboot_required(){
