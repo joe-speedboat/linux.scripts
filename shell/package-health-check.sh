@@ -148,9 +148,9 @@ check_public_repos() {
     local public_ip_found=0
 
     if [ "$(myos)" == "Debian" ]; then
-        repo_urls=$(grep -Eo "http[s]?://[^/]+" /etc/apt/sources.list /etc/apt/sources.list.d/*.list)
+        repo_urls=$(cat /etc/apt/sources.list /etc/apt/sources.list.d/*.list | grep -Eo "http[s]?://[^/]+")
     else
-        repo_urls=$(grep -Eo "http[s]?://[^/]+" /etc/yum.repos.d/*.repo)
+        repo_urls=$(cat /etc/yum.repos.d/*.repo | grep -Eo "http[s]?://[^/]+")
     fi
 
     for url in $repo_urls; do
