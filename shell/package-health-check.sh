@@ -165,7 +165,7 @@ check_public_repos() {
                 log debug  "Private IP detected in repo: $url ($ip)"
             fi
         else
-            log info "Repo: $url has no ip, skipping"
+            log debug "Repo: $url has no ip, skipping"
         fi
     done
 
