@@ -1,0 +1,130 @@
+---
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+# -----------------------------------------------------------------------
+# This playbook is used to delete a specific version of a content view in Foreman.
+# It first retrieves all versions of the content view, checks if any version has no assigned CVS,
+# and if so, deletes the version with the lowest id.
+# 
+# Foreman API DOC: https://foreman.domain.tld/apidoc
+# -----------------------------------------------------------------------
+# Variables:
+# - validate_certs: Whether to validate SSL certificates. Set to False if using self-signed certificates.
+# - foremanUser: The username to authenticate with Foreman API.
+# - foremanPassword: The password to authenticate with Foreman API.
+# - foremanUrl: The URL of the Foreman server.
+# - contentViewName: The name of the content view to delete a version from.
+# - failIfEmpty: Whether to fail the playbook if there are no versions to delete.
+# - doDebug: Whether to print debug information.
+# - protectDays: Never delete ContentViewVersion if newer than x days
+# -----------------------------------------------------------------------
+- hosts: localhost
+  gather_facts: yes
+  vars:
+    validate_certs: False
+    foremanUser: 'admin'
+    foremanPassword: 'xxx'
+    foremanUrl: 'https://foreman.domain.tld'
+    contentViewName: 'cv_rhel9'
+    failIfEmpty: False
+    doDebug: True
+    protectDays: 90
+  tasks:
+    - name: Calculate the date protectDays ago
+      set_fact:
+        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - (protectDays * 24 * 60 * 60)) }}"
+    - name: Retrieve all versions of the specified content view
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_views"
+        method: GET
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        return_content: yes
+        body_format: json
+        status_code: 200
+        validate_certs: "{{ validate_certs }}"
+      register: contentViewResult
+
+    - name: get id of contentViewName={{ contentViewName }}
+      set_fact:
+        contentViewId: "{{ item.id }}"
+      with_items: "{{ contentViewResult.json.results }}"
+      when: item.name == contentViewName
+      no_log: "{{ not doDebug }}"
+
+    - name: Select the content view with the lowest id
+      set_fact:
+        oldest_version: "{{ contentViewResult.json.results | selectattr('name', 'equalto', contentViewName) | map(attribute='versions') | list | sort(attribute='id') | first | first }}"
+
+    - name: Set doDelete to false by default
+      set_fact:
+        doDelete: False
+    - name: Set doDelete to true if the last content view id has 'environment_ids' [] and published date is older than protectDays
+      set_fact:
+        doDelete: True
+      when: 
+        - oldest_version.environment_ids | length == 0
+        - oldest_version.published.split(' ')[0] < protectDate
+
+    - name: Delete the version with lowest id={{ oldest_version.id if oldest_version is defined and oldest_version is mapping else '' }}
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_view_versions/{{ oldest_version.id if oldest_version is defined and oldest_version is mapping else '' }}"
+        method: DELETE
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        status_code: 202
+        validate_certs: "{{ validate_certs }}"
+      register: deleteTask
+      when: doDelete
+
+    - name: Print deleteTask
+      debug:
+        var: deleteTask
+      when: doDebug
+
+    - name: Poll the Foreman API to check the status of the deletion
+      uri:
+        url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ deleteTask.json.id }}"
+        method: GET
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        return_content: yes
+        body_format: json
+        status_code: 200
+        validate_certs: "{{ validate_certs }}"
+      register: deleteResult
+      until: deleteResult.json.state == 'stopped'
+      retries: 30
+      delay: 10
+      when: doDelete
+
+    - name: Print a message if there is no version to delete
+      debug:
+        msg: "ContenView {{ contentViewName }} has no tailed versions that are ready for deleting"
+      when: not doDelete
+
+    - name: Fail the playbook if there is no version to delete and failIfEmpty is set to True
+      fail:
+        msg: "No version to delete"
+      when: not doDelete and failIfEmpty == True
+
+    - name: Print debug information if doDebug is set to True
+      debug:
+        msg: 
+        - "contentViewName={{ contentViewName }}"
+        - "oldest_version={{ oldest_version }}"
+        - "doDelete={{ doDelete }}"
+        - "failIfEmpty={{ failIfEmpty }}"
+        - "protectDate={{ protectDate }}"
+        - "oldest_version.published={{ oldest_version.published.split(' ')[0] }}"
+      when: doDebug
+
+...
