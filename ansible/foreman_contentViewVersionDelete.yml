@@ -108,7 +108,7 @@
 
     - name: Print a message if there is no version to delete
       debug:
-        msg: "ContenView {{ contentViewName }} has no tailed versions that are ready for deleting"
+        msg: "ContenView {{ contentViewName }} has no tailed versions that are ready for deletion"
       when: not doDelete
 
     - name: Fail the playbook if there is no version to delete and failIfEmpty is set to True
