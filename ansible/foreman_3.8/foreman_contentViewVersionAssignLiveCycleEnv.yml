@@ -8,35 +8,61 @@
 # http://www.gnu.org/licenses/gpl.txt
 #
 # Foreman API DOC: https://foreman.domain.tld/apidoc
-# 
+#
 - hosts: localhost
   gather_facts: no
   vars:
+    foremanCvPromoteForce: True
     validate_certs: False
-    foremanUser: 'foreman_admin'
-    foremanPassword: 'xxxxxx'
-    foremanUrl: 'https://foreman.domain.tld'
-    contentViewName: 'cv_rhel9'
-    lifecycleEnvironmentName: 'LcTest'
+    foremanUser: 'admin'
+    foremanPassword: "xxxx"
+    foremanUrl: "https://foreman.domain.tld"
+    contentViewName: 'cv_rocky9'
+    # contentViewVersion: '3.0'
+    contentViewVersion: 'latest'
+    lifecycleEnvironmentName: 'LcProd'
   tasks:
     - name: Get the content view ID
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
         method: GET
-        force_basic_auth: yes
-        url_username: "{{ foremanUser }}"
-        url_password: "{{ foremanPassword }}"
         return_content: yes
         body_format: json
         status_code: 200
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
         validate_certs: "{{ validate_certs }}"
       register: contentViewResult
-    - name: define contentViewId
-      set_fact:
+    - set_fact:
         contentViewId: "{{ item.id }}"
       with_items: "{{ contentViewResult.json.results }}"
       when: item.name == contentViewName
-  
+
+    - name: Get the specific content view version IDs
+      uri:
+        url: "{{ foremanUrl }}/katello/api/content_views/{{ contentViewId }}/content_view_versions"
+        method: GET
+        return_content: yes
+        body_format: json
+        status_code: 200
+        force_basic_auth: yes
+        url_username: "{{ foremanUser }}"
+        url_password: "{{ foremanPassword }}"
+        validate_certs: "{{ validate_certs }}"
+      register: contentViewVersionsResult
+
+    - name: find specivic content view version ID
+      set_fact:
+        contentViewVersionId: "{{ item.id }}"
+      with_items: "{{ contentViewVersionsResult.json.results }}"
+      when: item.version == contentViewVersion and not contentViewVersion == 'latest'
+
+    - name: find latest content view version ID
+      set_fact:
+        contentViewVersionId: "{{ contentViewVersionsResult.json.results[0].id }}"
+      when: contentViewVersion == 'latest'
+
     - name: Get the lifecycle environment ID
       uri:
         url: "{{ foremanUrl }}/katello/api/environments"
@@ -49,42 +75,12 @@
         url_password: "{{ foremanPassword }}"
         validate_certs: "{{ validate_certs }}"
       register: lifecycleEnvironmentResult
+
     - name: define lifecycleEnvironmentId
       set_fact:
         lifecycleEnvironmentId: "{{ item.id }}"
       with_items: "{{ lifecycleEnvironmentResult.json.results }}"
       when: item.name == lifecycleEnvironmentName
-
-    - name: Publish a new version of content view
-      uri:
-        url: "{{ foremanUrl }}/katello/api/content_views/{{ contentViewId }}/publish"
-        method: POST
-        force_basic_auth: yes
-        url_username: "{{ foremanUser }}"
-        url_password: "{{ foremanPassword }}"
-        body_format: json
-        status_code: 202
-        validate_certs: "{{ validate_certs }}"
-      register: publishTask
-
-    - name: Poll until publish task is complete
-      uri:
-        url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ publishTask.json.id }}"
-        method: GET
-        force_basic_auth: yes
-        url_username: "{{ foremanUser }}"
-        url_password: "{{ foremanPassword }}"
-        return_content: yes
-        body_format: json
-        validate_certs: "{{ validate_certs }}"
-      register: taskResult
-      until: taskResult.json.state == 'stopped'
-      retries: 30
-      delay: 10
-
-    - name: define contentViewVersionId
-      set_fact:
-        contentViewVersionId: "{{ publishTask.json.input.content_view_version_id }}"
 
     - name: Promote a content view version to a lifecycle environment
       uri:
@@ -93,6 +89,7 @@
         body:
           id: "{{ contentViewVersionId }}"
           environment_ids: "{{ lifecycleEnvironmentId }}"
+          force: "{{ foremanCvPromoteForce }}"
         body_format: json
         status_code: 202
         force_basic_auth: yes
@@ -116,3 +113,4 @@
       retries: 30
       delay: 10
 ...
+

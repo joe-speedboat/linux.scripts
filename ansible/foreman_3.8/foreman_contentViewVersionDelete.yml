@@ -16,8 +16,8 @@
 # Variables:
 # - validate_certs: Whether to validate SSL certificates. Set to False if using self-signed certificates.
 # - foremanUser: The username to authenticate with Foreman API.
-# - foremanPassword: The password to authenticate with Foreman API.
-# - foremanUrl: The URL of the Foreman server.
+# - foremanPassword: "xxxx"
+# - foremanUrl: "https://foreman.domain.tld"
 # - contentViewName: The name of the content view to delete a version from.
 # - failIfEmpty: Whether to fail the playbook if there are no versions to delete.
 # - doDebug: Whether to print debug information.
@@ -26,18 +26,18 @@
 - hosts: localhost
   gather_facts: yes
   vars:
-    validate_certs: False
-    foremanUser: 'admin'
-    foremanPassword: 'xxx'
-    foremanUrl: 'https://foreman.domain.tld'
-    contentViewName: 'cv_rhel9'
-    failIfEmpty: False
-    doDebug: True
-    protectDays: 90
+   validate_certs: False
+   foremanUser: 'admin'
+   foremanPassword: "xxxx"
+   foremanUrl: "https://foreman.domain.tld"
+   contentViewName: 'cv_rocky9'
+   failIfEmpty: False
+   doDebug: True
+   protectDays: 90
   tasks:
     - name: Calculate the date protectDays ago
       set_fact:
-        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - ((protectDays|int) * 24 * 60 * 60)) }}"
+        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - (protectDays * 24 * 60 * 60)) }}"
     - name: Retrieve all versions of the specified content view
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
@@ -60,12 +60,12 @@
 
     - name: Select the content view with the lowest id
       set_fact:
-        oldest_version: "{{ contentViewResult.json.results | selectattr('name', 'equalto', contentViewName) | map(attribute='versions') | list | sort(attribute='id') | first | first }}"
+        oldest_version: "{{ contentViewResult.json.results | selectattr('name', 'equalto', contentViewName) | map(attribute='versions') | list | sort(attribute='id') | last | last }}"
 
     - name: Set doDelete to false by default
       set_fact:
         doDelete: False
-    - name: Set doDelete to true if the last content view id has 'environment_ids' [] and published date is older than protectDays
+    - name: Set doDelete to true if the last content view version id has 'environment_ids' [] and published date is older than protectDays
       set_fact:
         doDelete: True
       when: 
@@ -84,10 +84,10 @@
       register: deleteTask
       when: doDelete
 
-    - name: Print deleteTask
-      debug:
-        var: deleteTask
-      when: doDebug
+#    - name: Print deleteTask
+#      debug:
+#        var: deleteTask
+#      when: doDebug
 
     - name: Poll the Foreman API to check the status of the deletion
       uri:
@@ -108,7 +108,7 @@
 
     - name: Print a message if there is no version to delete
       debug:
-        msg: "ContenView {{ contentViewName }} has no tailed versions that are ready for deletion"
+        msg: "ContenView {{ contentViewName }} has no tailed versions that are ready for deleting"
       when: not doDelete
 
     - name: Fail the playbook if there is no version to delete and failIfEmpty is set to True
@@ -120,6 +120,7 @@
       debug:
         msg: 
         - "contentViewName={{ contentViewName }}"
+        - "contentViewId={{ contentViewId }}"
         - "oldest_version={{ oldest_version }}"
         - "doDelete={{ doDelete }}"
         - "failIfEmpty={{ failIfEmpty }}"

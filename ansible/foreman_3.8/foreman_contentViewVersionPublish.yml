@@ -13,10 +13,10 @@
   gather_facts: no
   vars:
     validate_certs: False
-    foremanUser: 'foreman_admin'
-    foremanPassword: 'xxxxxx'
-    foremanUrl: 'https://foreman.domain.tld'
-    contentViewName: 'cv_rhel9'
+    foremanUser: 'admin'
+    foremanPassword: "xxxx"
+    foremanUrl: "https://foreman.domain.tld"
+    contentViewName: 'cv_rocky9'
   tasks:
     - name: Get the content view ID
       uri:
