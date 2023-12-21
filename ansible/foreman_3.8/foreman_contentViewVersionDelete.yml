@@ -37,7 +37,7 @@
   tasks:
     - name: Calculate the date protectDays ago
       set_fact:
-        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - (protectDays * 24 * 60 * 60)) }}"
+        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - ((protectDays|int) * 24 * 60 * 60)) }}"
     - name: Retrieve all versions of the specified content view
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
