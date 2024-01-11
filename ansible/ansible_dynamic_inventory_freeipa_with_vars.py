@@ -88,8 +88,7 @@ def get_args():
 # Function to create a client instance and authenticate with FreeIPA API
 def get_client(server, user, password, ipaversion):
     if do_debug:
-        if do_debug:
-            print(f"{time.time()}: Starting get_client()")
+        print(f"{time.time()}: Starting get_client()")
     client = Client(
         server,
         version=ipaversion,
@@ -100,8 +99,7 @@ def get_client(server, user, password, ipaversion):
         password
     )
     if do_debug:
-        if do_debug:
-            print(f"{time.time()}: Logged in to FreeIPA server")
+        print(f"{time.time()}: Logged in to FreeIPA server")
     return client
 
 # Function to extract variables from the description field
@@ -157,8 +155,6 @@ def get_hostgroup_vars(client, hostgroup):
 def get_cache():
     if do_debug:
         print(f"{time.time()}: Starting get_cache()")
-    if do_debug:
-        print(f"{time.time()}: Starting get_cache()")
     if os.path.exists(cache_file):
         if time.time() - os.path.getmtime(cache_file) < cache_timeout:
             with open(cache_file, 'r') as f:
@@ -166,8 +162,6 @@ def get_cache():
     return None
 
 def update_cache(data):
-    if do_debug:
-        print(f"{time.time()}: Starting update_cache()")
     if do_debug:
         print(f"{time.time()}: Starting update_cache()")
     with open(cache_file, 'w') as f:
@@ -187,9 +181,7 @@ def get_inventory(client):
     inventory = {}
     def process_hostgroup(hostgroup):
         if do_debug:
-            if do_debug:
-                if do_debug:
-                    print(f"{time.time()}: Processing hostgroup {hostgroup['cn'][0]}")
+            print(f"{time.time()}: Processing hostgroup {hostgroup['cn'][0]}")
         hosts = hostgroup.get('member_host', [])
         inventory[hostgroup['cn'][0]] = {
             'hosts': hosts,
@@ -199,9 +191,7 @@ def get_inventory(client):
         all_hosts -= set(hosts)
 
     if do_debug:
-        if do_debug:
-            if do_debug:
-                print(f"{time.time()}: Starting to iterate over hostgroups in get_inventory()")
+        print(f"{time.time()}: Starting to iterate over hostgroups in get_inventory()")
     with ThreadPoolExecutor() as executor:
         executor.map(process_hostgroup, result)
 
@@ -250,8 +240,6 @@ def LockFile(file_path):
         fcntl.lockf(lock_file, fcntl.LOCK_UN)
 
 def main():
-    if do_debug:
-        print(f"{time.time()}: Starting main()")
     if do_debug:
         print(f"{time.time()}: Starting main()")
     with LockFile(lock_file):
@@ -306,13 +294,11 @@ def main():
             # For debugging
             result = f"{freeipauser}:{freeipapassword}@{freeipaserver}"
         if do_debug:
-            if do_debug:
-                print(f"{time.time()}: Updating cache")
+            print(f"{time.time()}: Updating cache")
         update_cache(result)
         print(result)
         if do_debug:
-            if do_debug:
-                print(f"{time.time()}: Finished printing result")
+            print(f"{time.time()}: Finished printing result")
 
 
 if __name__ == '__main__':
