@@ -22,6 +22,17 @@ import urllib3
 import re
 from os import environ as env
 from sys import exit
+import fcntl
+import time
+import contextlib
+
+import os
+import time
+
+read_vars_from_desc = False
+cache_timeout = 3600
+cache_file = os.path.join(os.path.expanduser("~"), ".ansible_freeipa_inventory_cache")
+lock_file = os.path.join(os.path.expanduser("~"), ".ansible_freeipa_inventory.lock")
 
 # We don't need warnings
 urllib3.disable_warnings()
@@ -85,9 +96,10 @@ def get_client(server, user, password, ipaversion):
 
 # Function to extract variables from the description field
 def extract_vars(description):
-    vars_match = re.search(r'vars:\s*({.*})', description)
-    if vars_match:
-        return json.loads(vars_match.group(1))
+    if read_vars_from_desc:
+        vars_match = re.search(r'vars:\s*({.*})', description)
+        if vars_match:
+            return json.loads(vars_match.group(1))
     return {}
 
 # Function to get host-specific variables
@@ -99,7 +111,7 @@ def get_host_vars(client, host):
     )['result']
     if 'usercertificate' in result:
         del result['usercertificate']
-    if 'description' in result:
+    if read_vars_from_desc and 'description' in result:
         description = result['description'][0]
         return extract_vars(description)
     return {}
@@ -112,7 +124,7 @@ def get_hostgroup_vars(client, hostgroup):
         {'all': True, 'raw': False}
     )['result']
     group_vars = {}
-    if 'description' in result:
+    if read_vars_from_desc and 'description' in result:
         description = result['description'][0]
         group_vars.update(extract_vars(description))
         if 'member_hostgroup' in result:
@@ -122,6 +134,17 @@ def get_hostgroup_vars(client, hostgroup):
     return group_vars
 
 # Function to get inventory
+def get_cache():
+    if os.path.exists(cache_file):
+        if time.time() - os.path.getmtime(cache_file) < cache_timeout:
+            with open(cache_file, 'r') as f:
+                return f.read()
+    return None
+
+def update_cache(data):
+    with open(cache_file, 'w') as f:
+        f.write(data)
+
 def get_inventory(client):
     result = client._request(
         'hostgroup_find',
@@ -129,13 +152,26 @@ def get_inventory(client):
         {'all': True, 'raw': False}
     )['result']
 
-    inventory = {
-        hostgroup['cn'][0]: {
-            'hosts': hostgroup.get('member_host', []),
+    all_hosts = set(host['fqdn'][0] for host in client._request('host_find', '', {'all': False, 'raw': False})['result'])
+
+    inventory = {}
+    for hostgroup in result:
+        hosts = hostgroup.get('member_host', [])
+        inventory[hostgroup['cn'][0]] = {
+            'hosts': hosts,
             'children': hostgroup.get('member_hostgroup', []),
             'vars': get_hostgroup_vars(client, hostgroup['cn'][0])
         }
-        for hostgroup in result
+        all_hosts -= set(hosts)
+
+    # Remove hosts that are members of any group from the `no_hostgroup` group
+    for hostgroup in inventory.values():
+        all_hosts -= set(hostgroup['hosts'])
+
+    inventory['no_hostgroup'] = {
+        'hosts': list(all_hosts),
+        'children': [],
+        'vars': {}
     }
 
     hostvars = {}
@@ -157,8 +193,25 @@ def get_inventory(client):
 
 
 # Main function
+@contextlib.contextmanager
+def LockFile(file_path):
+    lock_file = open(file_path, "w")
+    try:
+        for i in range(60):
+            try:
+                fcntl.lockf(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except IOError:
+                if i == 59:  # If this was the last attempt
+                    exit("Another instance of the script is already running. Exiting.")
+                time.sleep(1)
+        yield
+    finally:
+        fcntl.lockf(lock_file, fcntl.LOCK_UN)
+
 def main():
-    args = get_args()
+    with LockFile(lock_file):
+        args = get_args()
 
     freeipaserver = None
     freeipauser = None
@@ -193,15 +246,21 @@ def main():
 
     client = get_client(freeipaserver, freeipauser, freeipapassword, args.ipaversion)
 
-    if args.host:
-        result_vars = get_host_vars(client, args.host)
-        print(json.dumps(result_vars, indent=1))
-    elif args.list:
-        inv_string = get_inventory(client)
-        print(inv_string)
+    cache = get_cache()
+    if cache:
+        print(cache)
     else:
-        # For debugging
-        print(f"{freeipauser}:{freeipapassword}@{freeipaserver}")
+        if args.host:
+            result_vars = get_host_vars(client, args.host)
+            result = json.dumps(result_vars, indent=1)
+        elif args.list:
+            result = get_inventory(client)
+        else:
+            # For debugging
+            result = f"{freeipauser}:{freeipapassword}@{freeipaserver}"
+        update_cache(result)
+        print(result)
+
 
 if __name__ == '__main__':
     main()
