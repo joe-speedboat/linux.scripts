@@ -40,6 +40,8 @@ do_debug = False
 urllib3.disable_warnings()
 
 def get_args():
+    if do_debug:
+        print(f"{time.time()}: Starting get_args()")
     parser = ArgumentParser(description="AWX FreeIPA API dynamic host inventory")
     parser.add_argument(
         '--list',
@@ -104,6 +106,8 @@ def get_client(server, user, password, ipaversion):
 
 # Function to extract variables from the description field
 def extract_vars(description):
+    if do_debug:
+        print(f"{time.time()}: Starting extract_vars()")
     if read_vars_from_desc:
         vars_match = re.search(r'vars:\s*({.*})', description)
         if vars_match:
@@ -112,6 +116,8 @@ def extract_vars(description):
 
 # Function to get host-specific variables
 def get_host_vars(client, host):
+    if do_debug:
+        print(f"{time.time()}: Starting get_host_vars()")
     result = client._request(
         'host_show',
         host,
@@ -127,6 +133,8 @@ def get_host_vars(client, host):
 
 # Function to get hostgroup variables
 def get_hostgroup_vars(client, hostgroup):
+    if do_debug:
+        print(f"{time.time()}: Starting get_hostgroup_vars()")
     result = client._request(
         'hostgroup_show',
         hostgroup,
@@ -149,6 +157,8 @@ def get_hostgroup_vars(client, hostgroup):
 def get_cache():
     if do_debug:
         print(f"{time.time()}: Starting get_cache()")
+    if do_debug:
+        print(f"{time.time()}: Starting get_cache()")
     if os.path.exists(cache_file):
         if time.time() - os.path.getmtime(cache_file) < cache_timeout:
             with open(cache_file, 'r') as f:
@@ -156,6 +166,8 @@ def get_cache():
     return None
 
 def update_cache(data):
+    if do_debug:
+        print(f"{time.time()}: Starting update_cache()")
     if do_debug:
         print(f"{time.time()}: Starting update_cache()")
     with open(cache_file, 'w') as f:
@@ -182,7 +194,7 @@ def get_inventory(client):
         inventory[hostgroup['cn'][0]] = {
             'hosts': hosts,
             'children': hostgroup.get('member_hostgroup', []),
-            'vars': get_hostgroup_vars(client, hostgroup['cn'][0])
+            'vars': get_hostgroup_vars(client, hostgroup['cn'][0]) if read_vars_from_desc else {}
         }
         all_hosts -= set(hosts)
 
@@ -193,15 +205,7 @@ def get_inventory(client):
     with ThreadPoolExecutor() as executor:
         executor.map(process_hostgroup, result)
 
-    # Remove hosts that are members of any group from the `no_hostgroup` group
-    for hostgroup in inventory.values():
-        all_hosts -= set(hostgroup['hosts'])
 
-    inventory['no_hostgroup'] = {
-        'hosts': list(all_hosts),
-        'children': [],
-        'vars': {}
-    }
 
     hostvars = {}
     for hostgroup in result:
@@ -214,11 +218,12 @@ def get_inventory(client):
                 print(f"{time.time()}: Processing host {host}")
             if host not in hostvars:
                 hostvars[host] = {}
-            host_vars = get_host_vars(client, host)
-            # Merge host vars with group vars, giving precedence to host vars
-            merged_vars = group_vars.copy()
-            merged_vars.update(host_vars)
-            hostvars[host].update(merged_vars)
+            if read_vars_from_desc:
+                host_vars = get_host_vars(client, host)
+                # Merge host vars with group vars, giving precedence to host vars
+                merged_vars = group_vars.copy()
+                merged_vars.update(host_vars)
+                hostvars[host].update(merged_vars)
 
     inventory['_meta'] = {'hostvars': hostvars}
     if do_debug:
@@ -245,6 +250,8 @@ def LockFile(file_path):
         fcntl.lockf(lock_file, fcntl.LOCK_UN)
 
 def main():
+    if do_debug:
+        print(f"{time.time()}: Starting main()")
     if do_debug:
         print(f"{time.time()}: Starting main()")
     with LockFile(lock_file):
@@ -288,8 +295,11 @@ def main():
         print(cache)
     else:
         if args.host:
-            result_vars = get_host_vars(client, args.host)
-            result = json.dumps(result_vars, indent=1)
+            if read_vars_from_desc:
+                result_vars = get_host_vars(client, args.host)
+                result = json.dumps(result_vars, indent=1)
+            else:
+                result = {}
         elif args.list:
             result = get_inventory(client)
         else:
