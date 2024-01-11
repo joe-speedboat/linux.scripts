@@ -25,6 +25,7 @@ from sys import exit
 import fcntl
 import time
 import contextlib
+from concurrent.futures import ThreadPoolExecutor
 
 import os
 import time
@@ -33,6 +34,7 @@ read_vars_from_desc = False
 cache_timeout = 3600
 cache_file = os.path.join(os.path.expanduser("~"), ".ansible_freeipa_inventory_cache")
 lock_file = os.path.join(os.path.expanduser("~"), ".ansible_freeipa_inventory.lock")
+do_debug = False
 
 # We don't need warnings
 urllib3.disable_warnings()
@@ -83,6 +85,9 @@ def get_args():
 
 # Function to create a client instance and authenticate with FreeIPA API
 def get_client(server, user, password, ipaversion):
+    if do_debug:
+        if do_debug:
+            print(f"{time.time()}: Starting get_client()")
     client = Client(
         server,
         version=ipaversion,
@@ -92,6 +97,9 @@ def get_client(server, user, password, ipaversion):
         user,
         password
     )
+    if do_debug:
+        if do_debug:
+            print(f"{time.time()}: Logged in to FreeIPA server")
     return client
 
 # Function to extract variables from the description field
@@ -111,9 +119,10 @@ def get_host_vars(client, host):
     )['result']
     if 'usercertificate' in result:
         del result['usercertificate']
-    if read_vars_from_desc and 'description' in result:
-        description = result['description'][0]
-        return extract_vars(description)
+    if read_vars_from_desc:
+        if 'description' in result:
+            description = result['description'][0]
+            return extract_vars(description)
     return {}
 
 # Function to get hostgroup variables
@@ -124,17 +133,22 @@ def get_hostgroup_vars(client, hostgroup):
         {'all': True, 'raw': False}
     )['result']
     group_vars = {}
-    if read_vars_from_desc and 'description' in result:
-        description = result['description'][0]
-        group_vars.update(extract_vars(description))
-        if 'member_hostgroup' in result:
-            for child_hostgroup in result['member_hostgroup']:
-                child_vars = get_hostgroup_vars(client, child_hostgroup)
-                group_vars.update(child_vars)
+    if read_vars_from_desc:
+        if 'description' in result:
+            description = result['description'][0]
+            group_vars.update(extract_vars(description))
+            if 'member_hostgroup' in result:
+                print(f"{time.time()}: Starting to iterate over child hostgroups in get_hostgroup_vars()")
+                for child_hostgroup in result['member_hostgroup']:
+                    print(f"{time.time()}: Processing child hostgroup {child_hostgroup}")
+                    child_vars = get_hostgroup_vars(client, child_hostgroup)
+                    group_vars.update(child_vars)
     return group_vars
 
 # Function to get inventory
 def get_cache():
+    if do_debug:
+        print(f"{time.time()}: Starting get_cache()")
     if os.path.exists(cache_file):
         if time.time() - os.path.getmtime(cache_file) < cache_timeout:
             with open(cache_file, 'r') as f:
@@ -142,10 +156,14 @@ def get_cache():
     return None
 
 def update_cache(data):
+    if do_debug:
+        print(f"{time.time()}: Starting update_cache()")
     with open(cache_file, 'w') as f:
         f.write(data)
 
 def get_inventory(client):
+    if do_debug:
+        print(f"{time.time()}: Starting get_inventory()")
     result = client._request(
         'hostgroup_find',
         '',
@@ -155,7 +173,11 @@ def get_inventory(client):
     all_hosts = set(host['fqdn'][0] for host in client._request('host_find', '', {'all': False, 'raw': False})['result'])
 
     inventory = {}
-    for hostgroup in result:
+    def process_hostgroup(hostgroup):
+        if do_debug:
+            if do_debug:
+                if do_debug:
+                    print(f"{time.time()}: Processing hostgroup {hostgroup['cn'][0]}")
         hosts = hostgroup.get('member_host', [])
         inventory[hostgroup['cn'][0]] = {
             'hosts': hosts,
@@ -163,6 +185,13 @@ def get_inventory(client):
             'vars': get_hostgroup_vars(client, hostgroup['cn'][0])
         }
         all_hosts -= set(hosts)
+
+    if do_debug:
+        if do_debug:
+            if do_debug:
+                print(f"{time.time()}: Starting to iterate over hostgroups in get_inventory()")
+    with ThreadPoolExecutor() as executor:
+        executor.map(process_hostgroup, result)
 
     # Remove hosts that are members of any group from the `no_hostgroup` group
     for hostgroup in inventory.values():
@@ -178,7 +207,11 @@ def get_inventory(client):
     for hostgroup in result:
         group_vars = get_hostgroup_vars(client, hostgroup['cn'][0])
 
+        if do_debug:
+            print(f"{time.time()}: Starting to iterate over hosts in get_host_vars()")
         for host in hostgroup.get('member_host', []):
+            if do_debug:
+                print(f"{time.time()}: Processing host {host}")
             if host not in hostvars:
                 hostvars[host] = {}
             host_vars = get_host_vars(client, host)
@@ -188,6 +221,8 @@ def get_inventory(client):
             hostvars[host].update(merged_vars)
 
     inventory['_meta'] = {'hostvars': hostvars}
+    if do_debug:
+        print(f"{time.time()}: Finished building inventory")
     return json.dumps(inventory, indent=1, sort_keys=True)
 
 
@@ -210,6 +245,8 @@ def LockFile(file_path):
         fcntl.lockf(lock_file, fcntl.LOCK_UN)
 
 def main():
+    if do_debug:
+        print(f"{time.time()}: Starting main()")
     with LockFile(lock_file):
         args = get_args()
 
@@ -258,8 +295,14 @@ def main():
         else:
             # For debugging
             result = f"{freeipauser}:{freeipapassword}@{freeipaserver}"
+        if do_debug:
+            if do_debug:
+                print(f"{time.time()}: Updating cache")
         update_cache(result)
         print(result)
+        if do_debug:
+            if do_debug:
+                print(f"{time.time()}: Finished printing result")
 
 
 if __name__ == '__main__':
