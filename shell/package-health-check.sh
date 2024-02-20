@@ -26,6 +26,14 @@ repo_error_report=ERROR
 package_without_repos_report=ERROR
 public_repos_report=WARNING
 reboot_required_report=WARNING
+supported_version_report=ERROR
+declare -A supported_versions=(
+  ["redhat"]="8 9 10"
+  ["rocky"]="8 9 10"
+  ["alma"]="8 9 10"
+  ["ubuntu"]="20.04 22.04 24.04"
+  ["debian"]="10 11 12"
+)
 do_debug=0
 
 # Log function
@@ -76,6 +84,34 @@ then
   echo "This script can only be run on Debian or RHEL"
   exit 1
 fi
+
+# Check and log OS support using /etc/os-release
+check_os_support() {
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    local os_name=$(echo $ID | tr 'A-Z' 'a-z' )
+    local os_version=$( echo $VERSION_ID | cut -d. -f1)
+    local supported="no"
+
+    log debug os_name=$os_name  os_version=$os_version
+
+    for version in ${supported_versions[$os_name]}; do
+      log debug version=$version
+      if [[ "$version" == "$os_version" ]]; then
+        supported="yes"
+        break
+      fi
+    done
+
+    if [[ "$supported" == "no" ]]; then
+        log "$supported_version_report" "Unsupported OS version: $os_name $os_version"
+    else
+      log "INFO" "OS version supported: $os_name $os_version."
+    fi
+  else
+      log "ERROR" "/etc/os-release not found. Unable to determine OS version."
+  fi
+}
 
 
 # Check uptime
@@ -198,6 +234,7 @@ check_reboot_required(){
 
 
 # Run checks
+check_os_support
 check_uptime
 check_pkg_install
 check_repo_error
