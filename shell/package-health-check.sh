@@ -25,6 +25,7 @@ pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
 public_repos_report=WARNING
+public_repos_ip_regex_ignore='^999.888.777.666$'
 reboot_required_report=WARNING
 supported_version_report=ERROR
 declare -A supported_versions=(
@@ -186,7 +187,7 @@ check_public_repos() {
     if [ "$(myos)" == "Debian" ]; then
         repo_urls=$(cat /etc/apt/sources.list /etc/apt/sources.list.d/*.list | grep -Eo "http[s]?://[^/]+")
     else
-        repo_urls=$(cat /etc/yum.repos.d/*.repo | grep -Eo "http[s]?://[^/]+")
+        repo_urls=$(dnf repolist -v 2>/dev/null | grep Repo-baseurl | grep -Eo "http[s]?://[^/]+" | sort -u)
     fi
 
     for url in $repo_urls; do
@@ -195,8 +196,12 @@ check_public_repos() {
         # log debug "Checking repo FQDN: $fqdn, resolved IP: $ip"
         if [ "x$ip" != "x" ] ; then
             if ! [[ $ip =~ ^(10|172\.(1[6-9]|2[0-9]|3[0-1])|192\.168)\. ]]; then
+              if [[ $ip =~ $public_repos_ip_regex_ignore ]]; then
+                log info ignore public ip=$ip given by var public_repos_ip_regex_ignore=$public_repos_ip_regex_ignore
+              else
                 log debug "Public IP detected in repo: $url ($ip)"
                 public_ip_found=1
+              fi
             else
                 log debug  "Private IP detected in repo: $url ($ip)"
             fi
