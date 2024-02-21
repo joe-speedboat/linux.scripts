@@ -30,7 +30,7 @@ supported_version_report=ERROR
 declare -A supported_versions=(
   ["redhat"]="8 9 10"
   ["rocky"]="8 9 10"
-  ["alma"]="8 9 10"
+  ["almalinux"]="8 9 10"
   ["ubuntu"]="20.04 22.04 24.04"
   ["debian"]="10 11 12"
 )
