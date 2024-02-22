@@ -24,6 +24,7 @@ pkg_install_max_d=90
 pkg_install_report=ERROR
 repo_error_report=ERROR
 package_without_repos_report=ERROR
+package_without_repos_regex_ignore='thinlinc-(server|client)'
 public_repos_report=WARNING
 public_repos_ip_regex_ignore='^999.888.777.666$'
 reboot_required_report=WARNING
@@ -162,14 +163,14 @@ check_repo_error(){
 check_package_without_repos(){
   log debug exec: check_package_without_repos
   if [ "$(myos)" == "Debian" ]; then
-    if ! dpkg -l | awk '{print $2}' | xargs apt-cache madison 2>&1 | grep -q 'No available version'; then
+    if ! dpkg -l | awk '{print $2}' | xargs apt-cache madison 2>&1 | egrep -v "$package_without_repos_regex_ignore" | grep -q 'No available version'; then
       package_without_repos_report=INFO
       log $package_without_repos_report all packages are depending on repos
     else
       log $package_without_repos_report some packages have no repos behind
     fi
   else
-    if ! yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') | grep '@System'; then
+    if ! yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') | egrep -v "$package_without_repos_regex_ignore" | grep '@System'; then
       package_without_repos_report=INFO
       log $package_without_repos_report all packages are depending on repos
     else
