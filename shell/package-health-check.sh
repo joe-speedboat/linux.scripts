@@ -17,6 +17,8 @@ then
   exit 1
 fi
 
+CONF=/etc/package-health-check.conf
+
 # Variables
 uptime_max_d=90
 uptime_report=ERROR
@@ -37,6 +39,9 @@ declare -A supported_versions=(
   ["debian"]="10 11 12"
 )
 do_debug=0
+
+# read conf file if it exist
+test -r $CONF && source $CONF
 
 # Log function
 log(){
