@@ -20,6 +20,7 @@ fi
 CONF=/etc/package-health-check.conf
 
 # Variables
+TMPF=/tmp/$$_$(basename $0).tmp
 uptime_max_d=90
 uptime_report=ERROR
 pkg_install_max_d=90
@@ -40,9 +41,6 @@ declare -A supported_versions=(
 )
 do_debug=0
 
-# read conf file if it exist
-test -r $CONF && source $CONF
-
 # Log function
 log(){
    LEVEL=$(echo $1 | tr 'a-z' 'A-Z' ) ; shift
@@ -62,6 +60,12 @@ log(){
       exit 1
    fi
 }
+
+# read conf file if it exist
+if test -r $CONF ; then
+  log info found and read external config CONF=$CONF
+  source $CONF
+fi
 
 # Determine OS
 myos(){
@@ -92,6 +96,10 @@ then
   exit 1
 fi
 
+# create and protect tmp file
+> $TMPF
+chmod 600 $TMPF
+
 # Check and log OS support using /etc/os-release
 check_os_support() {
   if [ -f /etc/os-release ]; then
@@ -111,12 +119,12 @@ check_os_support() {
     done
 
     if [[ "$supported" == "no" ]]; then
-        log "$supported_version_report" "Unsupported OS version: $os_name $os_version"
+        log "$supported_version_report" "Outdated OS version: $os_name $os_version"
     else
-      log "INFO" "OS version supported: $os_name $os_version."
+      log "INFO" "OS version maintained: $os_name $os_version"
     fi
   else
-      log "ERROR" "/etc/os-release not found. Unable to determine OS version."
+      log "ERROR" "/etc/os-release not found. Unable to determine OS version"
   fi
 }
 
@@ -168,14 +176,20 @@ check_repo_error(){
 check_package_without_repos(){
   log debug exec: check_package_without_repos
   if [ "$(myos)" == "Debian" ]; then
-    if ! dpkg -l | awk '{print $2}' | xargs apt-cache madison 2>&1 | egrep -v "$package_without_repos_regex_ignore" | grep -q 'No available version'; then
+    dpkg -l | awk '{print $2}' | xargs apt-cache madison >$TMPF 2>&1 
+    cat $TMPF | egrep -q "$package_without_repos_regex_ignore" && log warning found packages to ignore without repos behind
+    cat $TMPF | egrep "$package_without_repos_regex_ignore" | sed 's/^/      /' 
+    if ! cat $TMPF | egrep -v "$package_without_repos_regex_ignore" | grep -q 'No available version'; then
       package_without_repos_report=INFO
       log $package_without_repos_report all packages are depending on repos
     else
       log $package_without_repos_report some packages have no repos behind
     fi
   else
-    if ! yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') | egrep -v "$package_without_repos_regex_ignore" | grep '@System'; then
+    yum list $(rpm -qa --qf '%{NAME}\n' | grep -v gpg-pubkey | tr '\n' ' ') >$TMPF 2>&1 
+    cat $TMPF | egrep -q "$package_without_repos_regex_ignore" && log warning found packages to ignore without repos behind
+    cat $TMPF | egrep "$package_without_repos_regex_ignore" | sed 's/^/      /' 
+    if ! cat $TMPF | egrep -v "$package_without_repos_regex_ignore" | grep '@System'; then
       package_without_repos_report=INFO
       log $package_without_repos_report all packages are depending on repos
     else
