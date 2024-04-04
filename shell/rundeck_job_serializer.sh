@@ -23,6 +23,7 @@
 #   Local Command, Run a command locally on the server 
 #     /usr/local/bin/rundeck_job_serializer.sh start
 # then do all the main jobs as needed
+#   here add error handler: Local Command, /usr/local/bin/rundeck_job_serializer.sh stop
 # add to end of your rundeck job:
 #   Local Command, Run a command locally on the server
 #     /usr/local/bin/rundeck_job_serializer.sh stop
