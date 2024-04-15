@@ -1,0 +1,69 @@
+---
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+########### Network Restriction Policy Example ##########
+# Target:
+#   - Allow all traffic from within current namespace. vaultwarden in this case
+#   - Deny all other ressources/namespaces to access any services in current namespace
+#   - Allow ingress controller (web traffic) to access services
+#
+# Setup:
+#   - Verify ingress network controller labels (ingress in our case)
+#     `kubectl get namespaces --show-labels  | grep -i policy-group | grep -i ingress`
+#     # lets assue it returns namespace: openshift-ingress
+#     kubectl get pods -n openshift-ingress
+#       NAME                              READY   STATUS    RESTARTS        AGE
+#       router-default-xxx   1/1     Running   0               5d23h
+#       router-default-yyy   1/1     Running   2 (5d23h ago)   30d
+#       # perfec, this are our ingress pods
+#   - Verify, current namespace is labled
+#     `kubectl get namespace vaultwarden --show-labels`
+#     # if not, label it!
+#     `kubectl label namespace vaultwarden name=vaultwarden`
+#   - Change namespace to your needs below, forex: 
+#     vaultwarden -> mynamespace
+#   - Apply policy:
+#     `kubectl apply -f restrict_network_policy_isolate_ns_allow_ingress.yml`
+#
+# More Documentation: https://github.com/ahmetb/kubernetes-network-policy-recipes/blob/master/04-deny-traffic-from-other-namespaces.md
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: vaultwarden
+  name: deny-from-other-namespaces
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress
+    - podSelector: {}
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  namespace: vaultwarden  # This is the namespace of the current project, where the rule is located
+  name: strict-deny-from-other-namespaces
+spec:
+  podSelector: {}  # This applies the policy to all pods in this namespace
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress  # Allows traffic from the Ingress controller
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: vaultwarden  # Allows traffic from within the same namespace
+...
