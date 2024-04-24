@@ -9,6 +9,9 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
+### QUICK AND DIRTY ONE-LINER
+# find /var/log -type f -delete ; rm -rf /etc/ssh/ssh_host_* ; rm -f /home/*/.bash_history /root/.bash_history /home/*/{.ssh,.local,.config} /root/{.ssh,.local,.config} /tmp/* /var/tmp/* ; sed -i '/localhost/!d' /etc/hosts ; dnf clean all || apt clean ; dnf -y remove iwl* ; touch /.autorelabel 
+
 # Function to clean common directories and files
 function clean_common {
     echo "Cleaning common directories and files..."
