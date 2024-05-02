@@ -33,12 +33,16 @@ function print_help() {
 function show() {
     echo "Volume Group Usage:"
     vg_name_length=$(vgs --noheadings --separator " " | awk '{print length($1)}' | sort -nr | head -n 1)
-    printf "   %-${vg_name_length}s %-10s %-10s\n" "NAME" "SIZE(GB)" "FREE(GB)"
+    header_length=$(echo -n "NAME" | wc -c)
+    max_length=$(($vg_name_length>$header_length?$vg_name_length:$header_length))
+    printf "   %-${max_length}s %-10s %-10s\n" "NAME" "SIZE(GB)" "FREE(GB)"
     vgs --units=g --noheadings --nosuffix | awk -v len=$vg_name_length '{printf "   %-"len"s %-10.2f %-10.2f\n", $1, $6, $7}'
     echo ""
     echo "Logical Volume Usage:"
     max_lv_name_length=$(lvs --noheadings --separator " " | awk '{print length("/dev/"$2"/"$1)}' | sort -nr | head -n 1)
-    printf "   %-${max_lv_name_length}s %-6s %-12s %-12s %-12s\n" "NAME" "FS" "LV_SIZE(GB)" "FS_SIZE(GB)" "FS_USED(GB)"
+    header_length=$(echo -n "NAME" | wc -c)
+    max_length=$(($max_lv_name_length>$header_length?$max_lv_name_length:$header_length))
+    printf "   %-${max_length}s %-6s %-12s %-12s %-12s\n" "NAME" "FS" "LV_SIZE(GB)" "FS_SIZE(GB)" "FS_USED(GB)"
     lvs --noheadings --separator " " | while read lv vg rest; do
         lv_name_length=$(echo "/dev/$vg/$lv" | wc -c)
         fs_type=$(lsblk -no FSTYPE "/dev/$vg/$lv")
