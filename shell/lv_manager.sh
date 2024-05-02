@@ -71,6 +71,13 @@ function grow() {
     elif [ "$fs_type" == "ext4" ]; then
         echo "   execute: resize2fs $lv_name"
         resize2fs $lv_name 2>&1 | sed 's/^/   /'
+    elif [ "$fs_type" == "swap" ]; then
+        echo "   execute: swapoff $lv_name"
+        swapoff $lv_name 2>&1 | sed 's/^/   /'
+        echo "   execute: mkswap $lv_name"
+        mkswap $lv_name 2>&1 | sed 's/^/   /'
+        echo "   execute: swapon $lv_name"
+        swapon $lv_name 2>&1 | sed 's/^/   /'
     fi
 }
 
