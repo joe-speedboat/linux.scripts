@@ -36,6 +36,7 @@ function show() {
     header_length=$(echo -n "NAME" | wc -c)
     max_length=$(($vg_name_length>$header_length?$vg_name_length:$header_length))
     max_length=$(($max_length<10?10:$max_length))
+    max_length=$(($max_length<10?10:$max_length))
     printf "%-${max_length}s %-10s %-10s\n" "NAME" "SIZE(GB)" "FREE(GB)"
     vgs --units=g --noheadings --nosuffix | awk -v len=$max_length '{printf "%-"len"s %-10.2f %-10.2f\n", $1, $6, $7}'
     echo ""
