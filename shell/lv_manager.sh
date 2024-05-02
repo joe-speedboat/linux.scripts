@@ -32,24 +32,27 @@ function print_help() {
 
 function show() {
     echo "Volume Group Usage:"
-    printf "   %-12s %-10s %-10s\n" "NAME" "SIZE(GB)" "FREE(GB)"
-    vgs --units=g --noheadings --nosuffix | awk '{printf "   %-12s %-10.2f %-10.2f\n", $1, $6, $7}'
+    vg_name_length=$(vgs --noheadings --separator " " | awk '{print length($1)}' | sort -nr | head -n 1)
+    printf "   %-${vg_name_length}s %-10s %-10s\n" "NAME" "SIZE(GB)" "FREE(GB)"
+    vgs --units=g --noheadings --nosuffix | awk -v len=$vg_name_length '{printf "   %-"len"s %-10.2f %-10.2f\n", $1, $6, $7}'
     echo ""
     echo "Logical Volume Usage:"
-    printf "   %-22s %-6s %-12s %-12s %-10s\n" "NAME" "FS" "LV_SIZE(GB)" "FS_SIZE(GB)" "FS_USED(GB)"
+    max_lv_name_length=$(lvs --noheadings --separator " " | awk '{print length("/dev/"$2"/"$1)}' | sort -nr | head -n 1)
+    printf "   %-${max_lv_name_length}s %-6s %-12s %-12s %-12s\n" "NAME" "FS" "LV_SIZE(GB)" "FS_SIZE(GB)" "FS_USED(GB)"
     lvs --noheadings --separator " " | while read lv vg rest; do
+        lv_name_length=$(echo "/dev/$vg/$lv" | wc -c)
         fs_type=$(lsblk -no FSTYPE "/dev/$vg/$lv")
         lv_size=$(lvs --noheadings --units=g --nosuffix -o lv_size "/dev/$vg/$lv" | awk '{printf "%.2f", $1}')
         if [ "$fs_type" == "swap" ]; then
             fs_size=$lv_size
             fs_used="N/A"
-            printf "   %-22s %-6s %-12.2f %-12.2f %-10s\n" "/dev/$vg/$lv" "$fs_type" "$lv_size" "$fs_size" "$fs_used"
+            printf "   %-${max_lv_name_length}s %-6s %-12.2f %-12.2f %-10s\n" "/dev/$vg/$lv" "$fs_type" "$lv_size" "$fs_size" "$fs_used"
         else
             fs_size=$(df -BM --output=size "/dev/$vg/$lv" | tail -n1 | awk '{printf "%.2f", $1/1024}')
             fs_used=$(df -BM --output=used "/dev/$vg/$lv" | tail -n1 | awk '{printf "%.2f", $1/1024}')
             lv_size_rounded=$(printf "%.0f" $lv_size)
             fs_size_rounded=$(printf "%.0f" $fs_size)
-            printf "   %-22s %-6s %-12.2f %-12.2f %-10s\n" "/dev/$vg/$lv" "$fs_type" "$lv_size" "$fs_size" "$fs_used"
+            printf "   %-${max_lv_name_length}s %-6s %-12.2f %-12.2f %-10s\n" "/dev/$vg/$lv" "$fs_type" "$lv_size" "$fs_size" "$fs_used"
         fi
     done
 }
