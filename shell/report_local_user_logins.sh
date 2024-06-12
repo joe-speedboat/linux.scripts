@@ -9,9 +9,9 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
-# Define a variable for excluded logins
-EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
-hostname2:user2:1.2.3.4'
+# Define a variable for excluded logins as regex
+EXCLUDE_LOGINS='^hostname1:^user1$:^1.2.3.4$
+^hostname2:^user2$:^1.2.3.4$'
 
 id | grep -q 'uid=0' || echo "ERROR: This script must run with root user"
 id | grep -q 'uid=0' || exit 1
