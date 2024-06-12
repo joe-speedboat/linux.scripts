@@ -28,23 +28,32 @@ extract_login_users() {
     awk -F':' '$7~/bash|sh$/ {print $1}' /etc/passwd
 }
 
-# Function to check for user logins via SSH in the last 25 hours
+# Function to check for user logins via SSH in the last 25 hours and extract source IP
 check_user_logins() {
     local user=$1
+    local logins=()
     # Determine if the system uses journalctl (systemd) or /var/log/auth.log (syslog)
     if command -v journalctl &> /dev/null; then
         # RHEL-ish systems with journalctl
-        if journalctl --since "25 hours ago" | grep -E "sshd.*Accepted .* for $user "; then
-            return 0 # Login found
-        fi
+        logins=$(journalctl --since "25 hours ago" | grep -E "sshd.*Accepted .* for $user ")
     elif [ -f /var/log/auth.log ]; then
         # Ubuntu systems with /var/log/auth.log
-        if grep -E "sshd.*Accepted .* for $user " /var/log/auth.log --since="25 hours ago"; then
-            return 0 # Login found
-        fi
+        logins=$(grep -E "sshd.*Accepted .* for $user " /var/log/auth.log --since="25 hours ago")
     else
         echo "Unsupported logging system."
         exit 2
+    fi
+
+    if [ -n "$logins" ]; then
+        echo "$logins" | while read -r login; do
+            local src_ip=$(echo "$login" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}')
+            if ! is_excluded_login "$user" "$src_ip"; then
+                echo "Login detected for user: $user from IP: $src_ip"
+                return 0 # Login found
+            else
+                echo "Excluded login detected for user: $user from IP: $src_ip"
+            fi
+        done
     fi
     return 1 # No login found
 }
@@ -52,11 +61,11 @@ check_user_logins() {
 # Function to check if a login should be excluded
 is_excluded_login() {
     local user=$1
+    local src_ip=$2
     local hostname=$(hostname)
-    local ip=$(hostname -I | awk '{print $1}')
     
     if [ "$DEBUG" -ne 0 ]; then
-        echo "Checking exclusions for user: $user, hostname: $hostname, ip: $ip"
+        echo "Checking exclusions for user: $user, hostname: $hostname, source IP: $src_ip"
     fi
 
     while IFS=: read -r ex_hostname ex_user ex_ip; do
@@ -66,16 +75,16 @@ is_excluded_login() {
 
         if [[ "$hostname" == "$ex_hostname" || "$ex_hostname" == "*" ]] && \
            [[ "$user" == "$ex_user" || "$ex_user" == "*" ]] && \
-           [[ "$ip" == "$ex_ip" || "$ex_ip" == "*" ]]; then
+           [[ "$src_ip" == "$ex_ip" || "$ex_ip" == "*" ]]; then
             if [ "$DEBUG" -ne 0 ]; then
-                echo "Match found. Excluding login for user: $user"
+                echo "Match found. Excluding login for user: $user from IP: $src_ip"
             fi
             return 0 # Excluded login
         fi
     done <<< "$EXCLUDE_LOGINS"
 
     if [ "$DEBUG" -ne 0 ]; then
-        echo "No match found. Not excluding login for user: $user"
+        echo "No match found. Not excluding login for user: $user from IP: $src_ip"
     fi
 
     return 1 # Not an excluded login
