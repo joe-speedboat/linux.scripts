@@ -8,15 +8,13 @@
 # FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
+
 # Define a variable for excluded logins
 EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
-hostname2:user2:1.2.3.4
-rundeck01.sun.bitbull.ch:root:192.168.223..*'
+hostname2:user2:1.2.3..*'
 
 # Define a variable for debug mode
 DEBUG=0
-EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
-hostname2:user2:1.2.3.4'
 
 # Define a function to extract users with login shells from /etc/passwd
 
