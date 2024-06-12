@@ -13,6 +13,12 @@ EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
 hostname2:user2:1.2.3.4
 rundeck01.sun.bitbull.ch:root:192.168.223.42'
 
+# Define a variable for debug mode
+DEBUG=1
+EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
+hostname2:user2:1.2.3.4
+rundeck01.sun.bitbull.ch:root:192.168.223.42'
+
 # Define a function to extract users with login shells from /etc/passwd
 
 id | grep -q 'uid=0' || echo "ERROR: This script must run with root user"
@@ -49,14 +55,29 @@ is_excluded_login() {
     local hostname=$(hostname)
     local ip=$(hostname -I | awk '{print $1}')
     
+    if [ "$DEBUG" -ne 0 ]; then
+        echo "Checking exclusions for user: $user, hostname: $hostname, ip: $ip"
+    fi
+
     while IFS=: read -r ex_hostname ex_user ex_ip; do
+        if [ "$DEBUG" -ne 0 ]; then
+            echo "Comparing with ex_hostname: $ex_hostname, ex_user: $ex_user, ex_ip: $ex_ip"
+        fi
+
         if [[ "$hostname" == "$ex_hostname" || "$ex_hostname" == "*" ]] && \
            [[ "$user" == "$ex_user" || "$ex_user" == "*" ]] && \
            [[ "$ip" == "$ex_ip" || "$ex_ip" == "*" ]]; then
+            if [ "$DEBUG" -ne 0 ]; then
+                echo "Match found. Excluding login for user: $user"
+            fi
             return 0 # Excluded login
         fi
     done <<< "$EXCLUDE_LOGINS"
-    
+
+    if [ "$DEBUG" -ne 0 ]; then
+        echo "No match found. Not excluding login for user: $user"
+    fi
+
     return 1 # Not an excluded login
 }
 login_users=$(extract_login_users)
