@@ -14,7 +14,7 @@ DEBUG=0
 
 # Define a variable for excluded logins
 EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
-hostname2:user2:1.2.3..*'
+hostname2:user2:1.2.3.4'
 
 id | grep -q 'uid=0' || echo "ERROR: This script must run with root user"
 id | grep -q 'uid=0' || exit 1
@@ -51,11 +51,10 @@ check_user_logins() {
             local src_ip=$(echo "$login" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}')
             [ $DEBUG -ne 0 ] && echo "Checking if login for user: $user from IP: $src_ip is excluded"
             if ! is_excluded_login "$user" "$src_ip"; then
-                [ $DEBUG -ne 0 ] && echo "Login for user: $user from IP: $src_ip is not excluded"
+                [ $DEBUG -ne 0 ] && echo "Login for user: $user from IP: $src_ip is not excluded / logins_found=$logins_found"
                 echo "Login detected for user: $user from IP: $src_ip"
-                ((logins_found++))
                 logins_found=1
-                [ $DEBUG -ne 0 ] && echo "Value of logins_found after setting: $logins_found"
+                [ $DEBUG -ne 0 ] && echo "logins_found=$logins_found"
             else
                 echo "Excluded login detected for user: $user from IP: $src_ip"
             fi
@@ -63,9 +62,10 @@ check_user_logins() {
     fi
     if [[ $logins_found -gt 0 ]]; then
         logins_found=1
-        [ $DEBUG -ne 0 ] && echo "Value of logins_found after setting: $logins_found"
+        [ $DEBUG -ne 0 ] && echo "------ Value of logins_found after setting: $logins_found"
     else
         [ $DEBUG -ne 0 ] && echo "------ No login found for user: $user"
+        true
     fi
 }
 
@@ -77,9 +77,9 @@ is_excluded_login() {
     [ $DEBUG -ne 0 ] && echo "Checking exclusions for user: $user, hostname: $hostname, source IP: $src_ip"
     while IFS=: read -r ex_hostname ex_user ex_ip; do 
         [ $DEBUG -ne 0 ] && echo "Comparing with ex_hostname: $ex_hostname, ex_user: $ex_user, ex_ip: $ex_ip"
-        if [[ "$hostname" == "$ex_hostname" || "$ex_hostname" == "*" ]] && \
-           [[ "$user" == "$ex_user" || "$ex_user" == "*" ]] && \
-           [[ "$src_ip" == "$ex_ip" || "$ex_ip" == "*" ]]; then
+        if [[ "$hostname" =~ $ex_hostname ]] && \
+           [[ "$user" =~ $ex_user ]] && \
+           [[ "$src_ip" =~ $ex_ip ]]; then
            [ $DEBUG -ne 0 ] && echo "Match found. Excluding login for user: $user from IP: $src_ip"
             return 0 # Excluded login
         fi
@@ -99,12 +99,12 @@ for user in $login_users; do
     if check_user_logins "$user"; then
         logins_found_at_all=1
     fi
-    [ $DEBUG -ne 0 ] && echo "Value of logins_found_at_all after checking user $user: $logins_found_at_all"
+    [ $DEBUG -ne 0 ] && echo "--- Value of logins_found_at_all after checking user $user: $logins_found_at_all"
 done
 
 [ $DEBUG -ne 0 ] && echo "Final value of logins_found_at_all: $logins_found_at_all"
 
-if [ $logins_found_at_all -eq 1 ]; then
+if [ $logins_found_at_all -gt 0 ]; then
     echo "Logins found for one or more users in the last 25 hours."
     exit 1
 else
