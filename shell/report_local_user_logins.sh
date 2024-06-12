@@ -8,6 +8,11 @@
 # FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
+# Define a variable for excluded logins
+EXCLUDE_LOGINS='hostname1:user1:1.2.3.4
+hostname2:user2:1.2.3.4
+rundeck01.sun.bitbull.ch:root:192.168.223.42'
+
 # Define a function to extract users with login shells from /etc/passwd
 
 id | grep -q 'uid=0' || echo "ERROR: This script must run with root user"
@@ -38,12 +43,29 @@ check_user_logins() {
     return 1 # No login found
 }
 
-# Main script logic
+# Function to check if a login should be excluded
+is_excluded_login() {
+    local user=$1
+    local hostname=$(hostname)
+    local ip=$(hostname -I | awk '{print $1}')
+    
+    while IFS=: read -r ex_hostname ex_user ex_ip; do
+        if [[ "$hostname" == "$ex_hostname" || "$ex_hostname" == "*" ]] && \
+           [[ "$user" == "$ex_user" || "$ex_user" == "*" ]] && \
+           [[ "$ip" == "$ex_ip" || "$ex_ip" == "*" ]]; then
+            return 0 # Excluded login
+        fi
+    done <<< "$EXCLUDE_LOGINS"
+    
+    return 1 # Not an excluded login
+}
 login_users=$(extract_login_users)
 logins_found=0
 
 for user in $login_users; do
-    if check_user_logins "$user"; then
+    if is_excluded_login "$user"; then
+        echo "Excluded login detected for user: $user"
+    elif check_user_logins "$user"; then
         echo "Login detected for user: $user"
         logins_found=1
     fi
