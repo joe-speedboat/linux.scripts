@@ -25,32 +25,30 @@ extract_login_users() {
 # Function to check for user logins via SSH in the last 25 hours and extract source IP
 check_user_logins() {
     local user=$1
-    local logins=()
+    local logins
     logins_found=0
     # Determine if the system uses journalctl (systemd) or /var/log/auth.log (syslog)
     if command -v journalctl &> /dev/null; then
         # RHEL-ish systems with journalctl
-        logins=$(journalctl --since "25 hours ago" | grep -E "sshd.*Accepted .* for $user ")
+        logins=$(journalctl --since "25 hours ago" | grep -E "sshd.*Accepted .* for $user " | sed 's/port .*//;s/.* Accepted /Accepted /'  | sort -u)
     elif [ -f /var/log/auth.log ]; then
         # Ubuntu systems with /var/log/auth.log
-        logins=$(grep -E "sshd.*Accepted .* for $user " /var/log/auth.log --since="25 hours ago")
+        logins=$(grep -E "sshd.*Accepted .* for $user " /var/log/auth.log --since="25 hours ago" | sed 's/port .*//;s/.* Accepted /Accepted /'  | sort -u)
     else
         echo "Unsupported logging system."
         exit 2
     fi
 
-
     if [ -n "$logins" ]; then
-        echo "$logins" | while read -r login; do
+        while read -r login; do
             local src_ip=$(echo "$login" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}')
             if ! is_excluded_login "$user" "$src_ip"; then
                 echo "Login detected for user: $user from IP: $src_ip"
-                return 1
+                logins_found_at_all=1
             else
                 echo "Excluded login detected for user: $user from IP: $src_ip"
-                return 0
             fi
-        done
+        done <<< "$logins"
     fi
 }
 
@@ -66,7 +64,6 @@ is_excluded_login() {
             return 0 # Excluded login
         fi
     done <<< "$EXCLUDE_LOGINS"
-
     return 1 # Not an excluded login
 }
 
@@ -76,12 +73,8 @@ declare -g logins_found_at_all=0
 login_users=$(extract_login_users)
 
 for user in $login_users; do
-    if ! check_user_logins "$user"; then
-        logins_found_at_all=1
-    fi
-    echo -n
+   check_user_logins "$user"
 done
-
 
 if [ $logins_found_at_all -gt 0 ]; then
     echo "Logins found for one or more users in the last 25 hours."
@@ -90,4 +83,3 @@ else
     echo "No unwanted logins found for the checked users in the last 25 hours. All good."
     exit 0
 fi
-
