@@ -93,7 +93,12 @@ def cache_is_valid(cache_file, cache_timeout):
         return False
     return True
 
-if cache_is_valid(cache_file, cache_timeout):
+# Check if config_file is newer than cache_file and remove cache_file if true
+if os.path.isfile(config_file) and os.path.isfile(cache_file):
+    config_mtime = os.path.getmtime(config_file)
+    cache_mtime = os.path.getmtime(cache_file)
+    if config_mtime > cache_mtime:
+        os.remove(cache_file)
     try:
         with open(cache_file, "r") as f:
             try:
