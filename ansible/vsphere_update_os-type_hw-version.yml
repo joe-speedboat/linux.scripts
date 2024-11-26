@@ -1,0 +1,111 @@
+---
+- name: Update VM Hardware Version and Guest OS
+  hosts: linux*,!blub,!blah
+  gather_facts: false
+  become: False
+  vars:
+    display_only: False
+    vsphere_hostname: vcenter01.domain.local
+    vsphere_user: adm1@mdomain.local
+    validate_certs: False
+  vars_prompt:
+    - name: vsphere_password  # Prompt for vSphere password
+      prompt: password for vsphere user
+
+  tasks:
+    - name: Determine the OS of the VM via SSH
+      ansible.builtin.command: cat /etc/os-release
+      register: os_release
+      become: yes
+
+    - name: Map OS to VMware Guest ID
+      ansible.builtin.set_fact:
+        guest_os_id: >-
+          {% if 'AlmaLinux' in os_release.stdout %}
+            rockylinux_64Guest
+          {% elif 'Rocky Linux' in os_release.stdout %}
+            rockylinux_64Guest
+          {% elif 'Ubuntu' in os_release.stdout %}
+            ubuntu64Guest
+          {% elif 'Debian GNU/Linux 10' in os_release.stdout %}
+            debian10_64Guest
+          {% elif 'Debian GNU/Linux 11' in os_release.stdout %}
+            debian11_64Guest
+          {% elif 'Oracle Linux 8' in os_release.stdout %}
+            oracleLinux8_64Guest
+          {% elif 'Oracle Linux 9' in os_release.stdout %}
+            oracleLinux9_64Guest
+          {% elif 'Red Hat Enterprise Linux 8' in os_release.stdout %}
+            rhel8_64Guest
+          {% elif 'Red Hat Enterprise Linux 9' in os_release.stdout %}
+            rhel9_64Guest
+          {% elif 'SUSE Linux Enterprise Server 15' in os_release.stdout %}
+            sles15_64Guest
+          {% elif 'SUSE Linux Enterprise Server 16' in os_release.stdout %}
+            sles16_64Guest
+          {% else %}
+            unsupported
+          {% endif %}
+
+    - name: Trim whitespace from guest_os_id
+      ansible.builtin.set_fact:
+        guest_os_id: "{{ guest_os_id.strip() }}"
+
+    - name: Print OS Release
+      debug:
+        var: os_release
+
+    - name: Print Matched vSphere OS
+      debug:
+        var: guest_os_id
+
+    - name: Fail if OS is not in the supported list
+      ansible.builtin.fail:
+        msg: "Unsupported OS detected on {{ inventory_hostname }}: {{ os_release.stdout }}"
+      when: guest_os_id == "unsupported"
+
+    - name: fail here if display_only
+      fail:
+      when: display_only
+
+    - name: Gracefully shut down the VM
+      community.vmware.vmware_guest_powerstate:
+        hostname: "{{ vsphere_hostname }}"
+        username: "{{ vsphere_user }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ inventory_hostname }}"
+        state: shutdown-guest  # Graceful shutdown
+        state_change_timeout: 300  # Wait up to 5 minutes for shutdown to complete
+      delegate_to: localhost
+
+    - name: Upgrade VM hardware version
+      community.vmware.vmware_guest:
+        hostname: "{{ vsphere_hostname }}"
+        username: "{{ vsphere_user }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ inventory_hostname }}"
+        hardware:
+          version: latest
+      delegate_to: localhost
+
+    - name: Update Guest OS to match detected OS
+      community.vmware.vmware_guest:
+        hostname: "{{ vsphere_hostname }}"
+        username: "{{ vsphere_user }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ inventory_hostname }}"
+        guest_id: "{{ guest_os_id }}"
+      delegate_to: localhost
+
+    - name: Power on the VM
+      community.vmware.vmware_guest_powerstate:
+        hostname: "{{ vsphere_hostname }}"
+        username: "{{ vsphere_user }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ inventory_hostname }}"
+        state: powered-on  # Power on the VM
+      delegate_to: localhost
