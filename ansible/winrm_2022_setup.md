@@ -2,31 +2,54 @@
 ## DESCRIPTION:
 Enable and setup winrm on windows 2022 server
 
-## NOTES:
+## Ansible WinRM
 
+### WinRM HTTPS Setup
 ```
-# Enable WinRM
-Enable-PSRemoting -Force
+# Setup HTTPS WinRM
+$hostname = $env:computername
+$isRunningService = (Get-Service winrm).Status -eq "Running"
 
-# Create a self-signed certificate for HTTPS
-$cert = New-SelfSignedCertificate -DnsName "localhost" -CertStoreLocation "cert:\LocalMachine\My"
+if (-not ($isRunningService -eq $true)) {
+  Write-Host "Starting WinRM service..."
+  Start-Service winrm
+}
 
-# Configure WinRM to use HTTPS
-winrm quickconfig -transport:https
-winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="512"}'
-winrm set winrm/config '@{MaxTimeoutms="1800000"}'
-winrm set winrm/config/service '@{AllowUnencrypted="false"}'
-winrm set winrm/config/service/auth '@{Basic="false"}'
-winrm set winrm/config/client/auth '@{Basic="false";Digest="false";Kerberos="true";Negotiate="true";Certificate="false";CredSSP="false"}'
-winrm set winrm/config/client '@{AllowUnencrypted="false"}'
+Write-Host "Generating self-signed SSL certificate..."
+$certificateThumbprint = (New-SelfSignedCertificate -DnsName "${hostname}" -CertStoreLocation Cert:\LocalMachine\My).Thumbprint
 
-# Create WinRM listener using HTTPS with the self-signed certificate
-winrm create winrm/config/Listener?Address=*+Transport=HTTPS '@{Hostname="localhost";CertificateThumbprint="'"$($cert.Thumbprint)"'";port="5986"}'
+Write-Host "Configuring WinRM to listen on HTTPS..."
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"${hostname}`"; CertificateThumbprint=`"${certificateThumbprint}`"}"
 
-# Add firewall rule for HTTPS
-New-NetFirewallRule -DisplayName "Windows Remote Management (HTTPS-In)" -Name "Windows Remote Management (HTTPS-In)" -Profile Any -LocalPort 5986 -Protocol TCP -Action Allow
+Write-Host "Updating firewall..."
+netsh advfirewall firewall add rule name="Windows Remote Management (HTTPS-In)" dir=in action=allow protocol=TCP localport=5986
 
-# Restart the WinRM service
-Restart-Service WinRM
+Get-Service winrm
+winrm enumerate winrm/config/Listener
+```
 
+##### Control Node
+```
+# as root
+# find python version for ansible
+ansible --version
+dnf install python3-pip
+
+# as user (s_ruettimc)
+pip3.9 install --user pywinrm
+ansible-galaxy collection install ansible.windows
+
+echo "[win_hosts]
+finswpx01.admin.unibas.ch
+
+[win_hosts:vars]
+ansible_port=5986
+ansible_connection=winrm
+ansible_winrm_transport=ntlm
+ansible_winrm_server_cert_validation=ignore
+ansible_user=Administrator
+ansible_password=changeMe...
+" > /etc/ansible/hosts
+
+ansible -m win_ping win_hosts
 ```
