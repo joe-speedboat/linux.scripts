@@ -1,0 +1,42 @@
+- hosts: rhel8.domain.tld
+  become: true     
+  gather_facts: True                   
+  vars:            
+    ansible_version_max: "2.16"        
+  tasks:           
+    - name: Compare Ansible version properly
+      set_fact:    
+        dnf_bug: "{{ ansible_version.full is version(ansible_version_max, '>') }}"
+      run_once: True                   
+      become: False                    
+      delegate_to: localhost           
+                   
+    - name: Set the dnf bug message    
+      set_fact:    
+        dnf_bug_msg:                   
+          - "Ansible version is {{ ansible_version.full }} - is greater than {{ ansible_version_max }}: {{ dnf_bug }}"
+          - "WARNING: We need to do a dnf workaround: https://github.com/ansible/ansible/issues/83357#issuecomment-2150254754"
+      run_once: True                   
+      become: False                    
+      delegate_to: localhost           
+                   
+    - name: Show result                
+      debug:       
+        msg: "{{ dnf_bug_msg }}"       
+      when: dnf_bug                    
+      run_once: True                   
+      become: False                    
+      delegate_to: localhost           
+                   
+    - name: Install required packages if not already installed (dnf)
+      ansible.builtin.command: "dnf -y install python3-dnf yum-utils"
+      register: dnf_result             
+      changed_when: "'Nothing to do.' not in dnf_result.stdout"
+      when: dnf_bug
+                   
+    - name: Install security updates (dnf)                                                                                                                   
+      ansible.builtin.command: "dnf -y update --security --exclude=kernel*"
+      register: dnf_result
+      changed_when: "'Nothing to do.' not in dnf_result.stdout"
+      when: dnf_bug
+
