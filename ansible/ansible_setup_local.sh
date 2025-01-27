@@ -166,7 +166,7 @@ set shiftwidth=2
 set softtabstop=2
 autocmd fileType yaml setlocal ai
 ' > /etc/vimrc.local
-chmod +r /etc/vimrc.local
+chmod 644 /etc/vimrc.local
 fi
 
 # Set ownership, permissions, and enforce group ownership
