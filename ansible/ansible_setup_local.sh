@@ -148,7 +148,8 @@ umask $UMASK
 
 export PS1="(\$ANSIBLE_VERSION)[\u@\h \W]\\\$ "
 EOF
-chmod +x $PROFILE_SCRIPT
+chown root:ansible $PROFILE_SCRIPT
+chmod u=rwx,g=rx,o-rwx $PROFILE_SCRIPT
 
 test -e /etc/vimrc.local
 if [ $? -ne 0 ]
