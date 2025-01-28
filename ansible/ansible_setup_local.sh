@@ -25,9 +25,9 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Ensure its an rpm based system
-grep -q 'platform:el9' /etc/os-release
+grep -q 'platform:el[89]' /etc/os-release
 if [[ $? -ne 0 ]]; then
-   echo "This is only for RHEL9 like systems"
+   echo "This is only for RHEL8 and RHEL9 like systems"
    exit 1
 fi
 
