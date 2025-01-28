@@ -91,26 +91,33 @@ pip install ansible=="$ANSIBLE_VERSION" argcomplete
 echo "Setting up Ansible autocomplete..."
 activate-global-python-argcomplete --dest /etc/bash_completion.d
 
-# Generate ansible.cfg template with all options disabled
-echo "Generating Ansible configuration template..."
-ansible-config init --disabled -t all > ${ANSIBLE_HOME}/ansible.cfg
 
-# Apply best practice modifications
-echo "Applying best practices to ansible.cfg..."
-sed -i 's|^;inventory=.*|inventory='"${ANSIBLE_HOME}/inventory"'|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;roles_path=.*|roles_path='"${ANSIBLE_HOME}/roles"'|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;log_path=.*|log_path='"${ANSIBLE_HOME}/logs/ansible.log"'|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;host_key_checking=.*|host_key_checking=False|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;retry_files_enabled=.*|retry_files_enabled=False|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;stdout_callback=.*|stdout_callback=yaml|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;deprecation_warnings=.*|deprecation_warnings=False|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;interpreter_python=.*|interpreter_python=auto_silent|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;pipelining=.*|pipelining=True|' ${ANSIBLE_HOME}/ansible.cfg
-sed -i 's|^;forks=.*|forks = 20|' ${ANSIBLE_HOME}/ansible.cfg
+test -r ${ANSIBLE_HOME}/ansible.cfg
+if [ $? -ne 0 ]
+then
+  # Generate ansible.cfg template with all options disabled
+  echo "Generating Ansible configuration template..."
+  ansible-config init --disabled -t all > ${ANSIBLE_HOME}/ansible.cfg
 
-# Set up inventory
-echo "Setting up Ansible inventory..."
-echo 'localhost ansible_connection=local ansible_become=False' > ${ANSIBLE_HOME}/inventory/localhost
+  # Apply best practice modifications
+  echo "Applying best practices to ansible.cfg..."
+  sed -i 's|^;inventory=.*|inventory='"${ANSIBLE_HOME}/inventory"'|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;roles_path=.*|roles_path='"${ANSIBLE_HOME}/roles"'|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;log_path=.*|log_path='"${ANSIBLE_HOME}/logs/ansible.log"'|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;host_key_checking=.*|host_key_checking=False|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;retry_files_enabled=.*|retry_files_enabled=False|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;stdout_callback=.*|stdout_callback=yaml|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;deprecation_warnings=.*|deprecation_warnings=False|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;interpreter_python=.*|interpreter_python=auto_silent|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;pipelining=.*|pipelining=True|' ${ANSIBLE_HOME}/ansible.cfg
+  sed -i 's|^;forks=.*|forks = 20|' ${ANSIBLE_HOME}/ansible.cfg
+  
+  # Set up inventory
+  echo "Setting up Ansible inventory..."
+  echo 'localhost ansible_connection=local ansible_become=False' > ${ANSIBLE_HOME}/inventory/localhost
+else
+  echo "WARNING: ${ANSIBLE_HOME}/ansible.cfg exists, so I do not modify this setup"
+fi
 
 # Set up auto-activation in /etc/profile.d/
 echo "Setting up Ansible virtual environment auto-activation for all users..."
