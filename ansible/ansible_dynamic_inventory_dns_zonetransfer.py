@@ -18,7 +18,7 @@ import re
 import os
 from datetime import datetime, timedelta
 cache_file = os.path.join(os.path.expanduser("~"), ".ansible_inventory_cache")
-config_file = "/etc/ansible/ansible_dynamic_inventory_dns_zonetransfer.conf"
+config_file = "/etc/ansible/ansible_dns_inventory.cfg"
 
 ###### THIS MAY GO TO CONFIG FILE ###############################
 # how long to keep the cache file
@@ -92,6 +92,14 @@ def cache_is_valid(cache_file, cache_timeout):
     if (current_time - mtime) > cache_timeout:
         return False
     return True
+
+# check if cache file os old and remove if needed
+def check_and_delete_cache(cache_file, cache_timeout):
+    if not cache_is_valid(cache_file, cache_timeout):
+        if os.path.isfile(cache_file):
+            os.remove(cache_file)
+
+check_and_delete_cache(cache_file, cache_timeout)
 
 # Check if config_file is newer than cache_file and remove cache_file if true
 if os.path.isfile(config_file) and os.path.isfile(cache_file):
