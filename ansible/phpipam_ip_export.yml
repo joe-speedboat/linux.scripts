@@ -20,14 +20,50 @@
           Content-Type: "application/json"
           token: "{{ api_token }}"
         return_content: yes
-      register: api_response
-      failed_when: "'data' not in api_response.json"
+      register: api_response_addr
+      failed_when: "'data' not in api_response_addr.json"
       no_log: True
+    - name: debug addr objects
+      debug:
+        var: api_response_addr.json.data[10]
+        verbosity: 1
+    - name: Get all subnet from phpIPAM
+      uri:
+        url: "{{ phpipam_url }}/api/{{ api_app_id }}/subnets/all/"
+        method: GET
+        headers:
+          Content-Type: "application/json"
+          token: "{{ api_token }}"
+        return_content: yes
+      register: api_response_subnets
+      failed_when: "'data' not in api_response_subnets.json"
+      no_log: True
+    - name: debug subnets objects
+      debug:
+        var: api_response_subnets.json.data[10]
+        verbosity: 1
+    - name: Get all vlans from phpIPAM
+      uri:
+        url: "{{ phpipam_url }}/api/{{ api_app_id }}/vlans/all/"
+        method: GET
+        headers:
+          Content-Type: "application/json"
+          token: "{{ api_token }}"
+        return_content: yes
+      register: api_response_vlans
+      failed_when: "'data' not in api_response_vlans.json"
+      no_log: True
+    - name: debug vlans objects
+      debug:
+        var: api_response_vlans.json.data[10]
+        verbosity: 1
     - name: Write CSV file using inline Jinja2 template
       copy:
         dest: "{{ output_file }}"
         content: |
-          ip,hostname,description,editDate,lastSeen,note
-          {%- for addr in api_response.json.data %}
-          {{ addr.ip }},{{ addr.hostname }},{{ addr.description | default('') | replace(',', ' ') }},{{ addr.editDate | default('') }},{{ addr.lastSeen }},{{ addr.note | default('')}}
+          ip,hostname,description,editDate,lastSeen,note,vlan_nr,vlan_name
+          {% for addr in api_response_addr.json.data %}
+          {%- set subnet = (api_response_subnets.json.data | selectattr('id', 'equalto', addr.subnetId) | list | default([]) | first) %}
+          {%- set vlan = (api_response_vlans.json.data | selectattr('id', 'equalto', subnet.vlanId | default(None)) | list | default([]) | first) %}
+          {{ addr.ip }},{{ addr.hostname }},{{ addr.description | default('') | replace(',', ' ') }},{{ addr.editDate | default('') }},{{ addr.lastSeen }},{{ addr.note | default('') }},{{ vlan.number | default('') }},{{ vlan.name | default('') }}
           {% endfor %}
