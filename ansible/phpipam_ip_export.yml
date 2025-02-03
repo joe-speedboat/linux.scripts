@@ -1,0 +1,33 @@
+---
+# desaster recovery export
+# https://github.com/phpipam/phpipam/issues/2624
+# SSL with App code token is auth with static token, no need to try to generate dynamic token with user/pass auth.
+# curl -X GET https://ipam.domain.tld/api/export_is_app_id/sections/ -i --header 'token: sadfsa...asdfas'
+- name: Export phpIPAM subnet data and create CSV inline
+  hosts: localhost
+  gather_facts: no
+  vars:
+    phpipam_url: "https://ipam.domain.tld"
+    api_app_id: "app_id_here"
+    api_token: "api_token_here"
+    output_file: "/tmp/phpipam_export.csv"
+  tasks:
+    - name: Get all addresses from phpIPAM
+      uri:
+        url: "{{ phpipam_url }}/api/{{ api_app_id }}/addresses/all/"
+        method: GET
+        headers:
+          Content-Type: "application/json"
+          token: "{{ api_token }}"
+        return_content: yes
+      register: api_response
+      failed_when: "'data' not in api_response.json"
+      no_log: True
+    - name: Write CSV file using inline Jinja2 template
+      copy:
+        dest: "{{ output_file }}"
+        content: |
+          ip,hostname,description,editDate,lastSeen,note
+          {%- for addr in api_response.json.data %}
+          {{ addr.ip }},{{ addr.hostname }},{{ addr.description | default('') | replace(',', ' ') }},{{ addr.editDate | default('') }},{{ addr.lastSeen }},{{ addr.note | default('')}}
+          {% endfor %}
