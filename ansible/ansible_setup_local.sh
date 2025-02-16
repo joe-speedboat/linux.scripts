@@ -46,7 +46,7 @@ if ! getent group ansible > /dev/null; then
 fi
 
 # Add specific users to ansible group if they exist
-for user in root ansible rundeck semaphore; do
+for user in root chris archham ansible rundeck semaphore; do
     if id "$user" &>/dev/null; then
         echo "Adding $user to ansible group..."
         usermod -aG ansible "$user"
@@ -155,8 +155,6 @@ umask $UMASK
 
 export PS1="(\$ANSIBLE_VERSION)[\u@\h \W]\\\$ "
 EOF
-chown root:ansible $PROFILE_SCRIPT
-chmod u=rwx,g=rx,o-rwx $PROFILE_SCRIPT
 
 test -e /etc/vimrc.local
 if [ $? -ne 0 ]
@@ -177,9 +175,11 @@ chmod 644 /etc/vimrc.local
 fi
 
 # Set ownership, permissions, and enforce group ownership
-echo "Setting correct permissions on $ANSIBLE_HOME..."
+echo "Setting correct permissions on setup ..."
 chown -R root:ansible "$ANSIBLE_HOME"
 chmod -R ug+rwX,o-rwx "$ANSIBLE_HOME"
+chown root:ansible $PROFILE_SCRIPT
+chmod u=rwx,g=rx,o-rwx $PROFILE_SCRIPT
 
 # Apply group sticky bit recursively on directories
 find "$ANSIBLE_HOME" -type d -exec chmod g+s {} +

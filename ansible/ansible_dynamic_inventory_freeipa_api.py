@@ -74,9 +74,22 @@ def get_hosts_in_group(session, group_name):
     return result.get("member_host", []) if "member_host" in result else []
 
 
+def get_all_hosts(session):
+    """Fetch all hosts from FreeIPA."""
+    data = {"method": "host_find", "params": [[], {}]}
+    headers = {"Content-Type": "application/json", "Referer": f"https://{IPA_SERVER}/ipa"}
+
+    response = session.post(IPA_URL, json=data, headers=headers, verify=False)
+    if response.status_code != 200:
+        print("Failed to fetch hosts.")
+        exit(1)
+
+    return response.json().get("result", {}).get("result", [])
+
 def generate_ansible_inventory():
     """Generate an Ansible dynamic inventory from FreeIPA."""
     session = get_session()
+    all_hosts = get_all_hosts(session)
     hostgroups = get_hostgroups(session)
 
     inventory = {"_meta": {"hostvars": {}}}
@@ -87,6 +100,22 @@ def generate_ansible_inventory():
 
         if hosts:
             inventory[group_name] = {"hosts": hosts}
+
+    # Track hosts that are part of any group
+    grouped_hosts = set()
+
+    for group in hostgroups:
+        group_name = group["cn"][0]
+        hosts = get_hosts_in_group(session, group_name)
+
+        if hosts:
+            inventory[group_name] = {"hosts": hosts}
+            grouped_hosts.update(hosts)
+
+    # Add ungrouped hosts
+    ungrouped_hosts = [host["fqdn"][0] for host in all_hosts if host["fqdn"][0] not in grouped_hosts]
+    if ungrouped_hosts:
+        inventory["ungrouped"] = {"hosts": ungrouped_hosts}
 
     print(json.dumps(inventory, indent=4))
 
