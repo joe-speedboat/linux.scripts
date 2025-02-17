@@ -164,6 +164,7 @@ echo "Optimizing VIM ansible settings in /etc/vimrc.local for all users..."
 echo 'syntax on
 set cursorline
 set cursorcolumn
+highlight CursorColumn ctermfg=White ctermbg=Yellow cterm=bold guifg=white guibg=yellow gui=bold
 set title
 set expandtab
 set tabstop=2
