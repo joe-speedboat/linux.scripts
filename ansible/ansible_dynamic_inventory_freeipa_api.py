@@ -20,6 +20,8 @@ import argparse
 # Cache settings
 cache_time_sec = 30
 cache_file = os.path.expanduser("~/.ansible_freeipa.cache")
+
+# FreeIPA settings are taken from system env vars
 IPA_SERVER = os.getenv("freeipaserver")
 USERNAME = os.getenv("freeipauser")
 PASSWORD = os.getenv("freeipapassword")
