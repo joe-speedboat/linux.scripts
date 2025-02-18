@@ -1,0 +1,52 @@
+plugin: community.vmware.vmware_vm_inventory
+strict: False
+hostname: pvcenter1.domain.local
+username: 'apiro@vsphere.local'
+password: 'udonotshare4ever.'
+validate_certs: True
+hostnames:
+- config.name
+
+properties:
+- 'runtime.powerState'
+- 'config.name'
+- 'config.guestId'
+
+filters:
+- runtime.powerState == "poweredOn"
+
+with_path: False
+with_tags: True
+with_sanitized_property_name: True
+
+groups:
+  linux: |
+    config.guestId.lower().startswith('alma') or
+    config.guestId.lower().startswith('rocky') or
+    config.guestId.lower().startswith('ubuntu') or
+    config.guestId.lower().startswith('rhel')
+
+  windows: |
+    'windows' in config.guestId.lower()
+
+  no_update: |
+    'no_update' in tag_category.Ansible
+
+  ignore: |
+    not ( config.guestId.lower().startswith('alma') or
+    config.guestId.lower().startswith('rocky') or
+    config.guestId.lower().startswith('ubuntu') or
+    config.guestId.lower().startswith('rhel') or
+    'windows' in config.guestId.lower() ) or
+    'ignore' in tag_category.Ansible or
+    'maintenance' in tag_category.Ansible
+
+  citrix_ts: |
+    config.name.lower().startswith('sv-') and
+    'xapp-' in config.name.lower()
+
+  probe: |
+    config.name.lower().startswith('sv-pnprobe-')
+
+  prod: |
+    config.name.lower().startswith('sv-p')
