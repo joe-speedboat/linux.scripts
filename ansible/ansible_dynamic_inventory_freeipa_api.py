@@ -12,11 +12,16 @@
 # http://www.gnu.org/licenses/gpl.txt
 
 import os
+import time
 import json
 import requests
 import argparse
 
-# Get FreeIPA credentials from environment variables
+# Cache settings
+cache_time_sec = 30
+cache_file = os.path.expanduser("~/.ansible_freeipa.cache")
+
+# FreeIPA settings are taken from system env vars
 IPA_SERVER = os.getenv("freeipaserver")
 USERNAME = os.getenv("freeipauser")
 PASSWORD = os.getenv("freeipapassword")
@@ -62,7 +67,7 @@ def get_hostgroups(session):
 
 
 def get_hosts_in_group(session, group_name):
-    """Fetch hosts associated with a specific host group."""
+    """Fetch hosts associated with a specific host group, including nested groups."""
     data = {"method": "hostgroup_show", "params": [[group_name], {}]}
     headers = {"Content-Type": "application/json", "Referer": f"https://{IPA_SERVER}/ipa"}
 
@@ -71,12 +76,41 @@ def get_hosts_in_group(session, group_name):
         return []
 
     result = response.json().get("result", {}).get("result", {})
-    return result.get("member_host", []) if "member_host" in result else []
+    hosts = result.get("member_host", [])
+    nested_groups = result.get("member_hostgroup", [])
 
+    # Recursively fetch hosts from nested groups
+    for nested_group in nested_groups:
+        hosts.extend(get_hosts_in_group(session, nested_group))
+
+    return hosts
+
+
+def get_all_hosts(session):
+    """Fetch all hosts from FreeIPA."""
+    data = {"method": "host_find", "params": [[], {}]}
+    headers = {"Content-Type": "application/json", "Referer": f"https://{IPA_SERVER}/ipa"}
+
+    response = session.post(IPA_URL, json=data, headers=headers, verify=False)
+    if response.status_code != 200:
+        print("Failed to fetch hosts.")
+        exit(1)
+
+    return response.json().get("result", {}).get("result", [])
 
 def generate_ansible_inventory():
     """Generate an Ansible dynamic inventory from FreeIPA."""
+    # Check if cache is valid
+    if os.path.exists(cache_file):
+        cache_mtime = os.path.getmtime(cache_file)
+        if time.time() - cache_mtime < cache_time_sec:
+            with open(cache_file, 'r') as f:
+                print(f.read())
+            return
+
+    # Generate inventory and update cache
     session = get_session()
+    all_hosts = get_all_hosts(session)
     hostgroups = get_hostgroups(session)
 
     inventory = {"_meta": {"hostvars": {}}}
@@ -85,10 +119,28 @@ def generate_ansible_inventory():
         group_name = group["cn"][0]
         hosts = get_hosts_in_group(session, group_name)
 
+        inventory[group_name] = {"hosts": hosts}
+
+    # Track hosts that are part of any group
+    grouped_hosts = set()
+
+    for group in hostgroups:
+        group_name = group["cn"][0]
+        hosts = get_hosts_in_group(session, group_name)
+
         if hosts:
             inventory[group_name] = {"hosts": hosts}
+            grouped_hosts.update(hosts)
 
-    print(json.dumps(inventory, indent=4))
+    # Add ungrouped hosts
+    ungrouped_hosts = [host["fqdn"][0] for host in all_hosts if host["fqdn"][0] not in grouped_hosts]
+    if ungrouped_hosts:
+        inventory["ungrouped"] = {"hosts": ungrouped_hosts}
+
+    inventory_json = json.dumps(inventory, indent=4)
+    with open(cache_file, 'w') as f:
+        f.write(inventory_json)
+    print(inventory_json)
 
 
 if __name__ == "__main__":
