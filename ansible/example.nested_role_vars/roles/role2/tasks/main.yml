@@ -1,0 +1,6 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for role2
+- debug: var=var1
+- debug: var=var2
+- debug: var=var3

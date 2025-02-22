@@ -1,0 +1,34 @@
+
+PLAY [localhost] ***************************************************************
+
+TASK [role1 : set_fact] ********************************************************
+ok: [localhost]
+
+TASK [role1 : set pass_vars into current context] ******************************
+ok: [localhost] => (item={'key': 'var1', 'value': 'host_var'})
+ok: [localhost] => (item={'key': 'var2', 'value': 'role1_defaults'})
+
+TASK [role1 : debug] ***********************************************************
+ok: [localhost] => 
+  pass_vars:
+    var1: host_var
+    var2: role1_defaults
+
+TASK [include_role : role2] ****************************************************
+included: role2 for localhost
+
+TASK [role2 : debug] ***********************************************************
+ok: [localhost] => 
+  var1: host_var
+
+TASK [role2 : debug] ***********************************************************
+ok: [localhost] => 
+  var2: role1_defaults
+
+TASK [role2 : debug] ***********************************************************
+ok: [localhost] => 
+  var3: role2_defaults
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

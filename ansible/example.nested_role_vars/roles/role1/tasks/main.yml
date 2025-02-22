@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for role1
+- set_fact:
+    pass_vars="{{ vars | dict2items | rejectattr('key', 'search', '^ansible|^role|^host|^group|^inventory|^play|^environment') | items2dict }}"
+
+- name: set pass_vars into current context
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  with_dict: "{{ pass_vars }}"
+
+- debug: var=pass_vars
+
+- include_role:
+    name: role2
+
