@@ -4,8 +4,6 @@ This example demonstrates how variables from `role1` can be injected into called
 
 ## File Structure
 
-```
-
 ## Playbook Execution Output
 
 The following is the output of running the `role_test.yml` playbook, as recorded in `role_test.log`:
@@ -47,10 +45,12 @@ localhost                  : ok=7    changed=0    unreachable=0    failed=0    s
 
 ### Explanation
 
-- **Variable Precedence**: The variables are set in the following order of precedence: `host_vars` < `role1_defaults` < `role2_defaults`.
+- **ariable Precedence**: The variables are set in the following order of precedence: `host_vars` < `role1_defaults` < `role2_defaults`.
 - **role1**: Sets `var1` to `host_var` and `var2` to `role1_defaults` using `set_fact`. These variables are then passed to the current context.
 - **role2**: Receives the variables from `role1`. The `debug` tasks show that `var1` is set to `host_var`, `var2` is set to `role1_defaults`, and `var3` is set to `role2_defaults`.
 - This demonstrates how variables can be passed from one role to another, with the final values reflecting the precedence rules.
+
+```
 ansible.nested_role_vars_example/
 ├── ansible.cfg
 ├── inventory
