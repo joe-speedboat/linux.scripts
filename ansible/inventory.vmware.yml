@@ -1,9 +1,9 @@
 plugin: community.vmware.vmware_vm_inventory
 strict: False
-hostname: pvcenter1.domain.local
-username: 'apiro@vsphere.local'
-password: 'udonotshare4ever.'
-validate_certs: True
+hostname: vmpvc-01.domain.local
+username: 'api_ro@vsphere.local'
+password: 'xxx.xxx'
+validate_certs: False
 hostnames:
 - config.name
 
@@ -14,12 +14,22 @@ properties:
 
 filters:
 - runtime.powerState == "poweredOn"
+- not (
+  config.name.lower().startswith('lab_') or
+  config.name.lower().startswith('lab-') or
+  config.name.lower().endswith('-lab') or
+  config.name.lower().endswith('_lab')
+  )       
 
 with_path: False
 with_tags: True
 with_sanitized_property_name: True
 
 groups:
+
+  srv_pvc_01: |
+    not config.guestId.startswith('DoMatchAllOs')
+
   linux: |
     config.guestId.lower().startswith('alma') or
     config.guestId.lower().startswith('rocky') or
@@ -29,24 +39,40 @@ groups:
   windows: |
     'windows' in config.guestId.lower()
 
-  no_update: |
-    'no_update' in tag_category.Ansible
-
   ignore: |
     not ( config.guestId.lower().startswith('alma') or
     config.guestId.lower().startswith('rocky') or
     config.guestId.lower().startswith('ubuntu') or
     config.guestId.lower().startswith('rhel') or
-    'windows' in config.guestId.lower() ) or
+    'windows' in config.guestId.lower()) or
     'ignore' in tag_category.Ansible or
+    'maintenance' in tag_category.Ansible or
+    config.name.lower().startswith('vmpvprx-')
+
+  no_update_tag: |
+    'no_update' in tag_category.Ansible
+
+  maintenance_tag: |
     'maintenance' in tag_category.Ansible
 
+  ignore_tag: |
+    'ignore' in tag_category.Ansible
+
   citrix_ts: |
-    config.name.lower().startswith('sv-') and
+    config.name.lower().startswith('srv-') and
     'xapp-' in config.name.lower()
 
+  git: |
+    config.name.lower().startswith('vmpgit')
+
+  ntp_server: |
+    config.name.lower().startswith('vmptime-')
+
   probe: |
-    config.name.lower().startswith('sv-pnprobe-')
+    config.name.lower().startswith('vmpnprobe-')
 
   prod: |
-    config.name.lower().startswith('sv-p')
+    not config.name.lower().startswith('vmt')
+
+  test: |
+    config.name.lower().startswith('vmt')
