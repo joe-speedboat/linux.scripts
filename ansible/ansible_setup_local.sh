@@ -154,6 +154,10 @@ fi
 umask $UMASK
 
 export PS1="(\$ANSIBLE_VERSION)[\u@\h \W]\\\$ "
+
+if [ "\$USER" == "root" ]; then
+echo "WARNING: Using Ansible as root is not a good choice, consider to use a unprivileged user and add it to the ansible group instead"
+fi
 EOF
 
 test -e /etc/vimrc.local
