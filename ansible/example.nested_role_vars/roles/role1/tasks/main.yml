@@ -2,7 +2,7 @@
 ---
 # tasks file for role1
 - set_fact:
-    pass_vars="{{ vars | dict2items | rejectattr('key', 'search', '^ansible|^role|^host|^group|^inventory|^play|^environment') | items2dict }}"
+    pass_vars: "{{ vars | dict2items | rejectattr('key', 'search', '^ansible|^role|^host|^group|^inventory|^play|^environment') | items2dict }}"
 
 - name: set pass_vars into current context
   set_fact:
