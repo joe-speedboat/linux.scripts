@@ -7,9 +7,17 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/gpl.txt
 
-#!/bin/bash
+ES_HOST="${ES_HOST:-localhost:9200}"
 
-ES_HOST="localhost:9200"
+if ! command -v jq &> /dev/null; then
+    echo "jq could not be found, please install it."
+    exit 1
+fi
+
+if ! command -v curl &> /dev/null; then
+    echo "curl could not be found, please install it."
+    exit 1
+fi
 
 # Print header
 printf "%-30s %15s %-25s %-30s\n" "INDEX_NAME" "MSG_COUNT" "LAST_WRITTEN" "TEMPLATE"
