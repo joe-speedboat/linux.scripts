@@ -39,15 +39,15 @@ groups:
   windows: |
     'windows' in config.guestId.lower()
 
-  ignore: |
+  ignore: |              
     not ( config.guestId.lower().startswith('alma') or
-    config.guestId.lower().startswith('rocky') or
+    config.guestId.lower().startswith('rocky') or 
     config.guestId.lower().startswith('ubuntu') or
     config.guestId.lower().startswith('rhel') or
     'windows' in config.guestId.lower()) or
+    config.name.lower().startswith('srv-pvprx-') or
     'ignore' in tag_category.Ansible or
-    'maintenance' in tag_category.Ansible or
-    config.name.lower().startswith('vmpvprx-')
+    'maintenance' in tag_category.Ansible
 
   no_update_tag: |
     'no_update' in tag_category.Ansible
