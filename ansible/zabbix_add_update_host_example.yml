@@ -1,0 +1,53 @@
+- hosts: test01.domain.tld
+  become: False
+  gather_facts: True
+  vars:
+    zabbix_groups: 
+    - prod
+    - zone1
+    server_fqdn: zabbix.domain.tld
+    ansible_network_os: community.zabbix.zabbix
+    ansible_connection: httpapi
+    ansible_httpapi_port: 443
+    ansible_httpapi_use_ssl: true
+    ansible_httpapi_validate_certs: false
+    ansible_zabbix_url_path: ''
+    ansible_user: zabbix-api
+    ansible_httpapi_pass: 'my_secret_pw'
+  tasks:
+  - name: Set api configuration facts
+    ansible.builtin.set_fact:
+      ansible_network_os: community.zabbix.zabbix
+      ansible_connection: "{{ ansible_connection }}"
+      ansible_httpapi_port: "{{ ansible_httpapi_port }}"
+      ansible_zabbix_url_path: "{{ ansible_zabbix_url_path }}"
+      ansible_host: "{{ server_fqdn }}"
+      ansible_user: "{{ ansible_user }}"
+      ansible_httpapi_pass: "{{ ansible_httpapi_pass }}"
+
+  - name: Create host groups
+    community.zabbix.zabbix_group:
+      host_groups: "{{ zabbix_groups }}"
+      state: present
+    delegate_to: "{{ server_fqdn }}"
+
+  - name: Read host 
+    community.zabbix.zabbix_host_info:
+      host_name: "{{ ansible_fqdn }}"
+    delegate_to: "{{ server_fqdn }}"
+    register: zhost
+  - name: get existing host groups
+    set_fact: 
+      current_hostgroups: "{{ zhost.hosts[0].hostgroups | map(attribute='name') | list }}"
+  - name: define final host groups
+    set_fact: 
+      final_hostgroups: "{{ current_hostgroups | union(zabbix_groups) }}"
+  - debug: var=current_hostgroups
+  - debug: var=final_hostgroups
+
+  - name: Configure host 
+    community.zabbix.zabbix_host:
+      host_name: "{{ ansible_fqdn }}"
+      host_groups: "{{ final_hostgroups }}"
+    delegate_to: "{{ server_fqdn }}"
+
