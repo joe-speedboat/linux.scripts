@@ -209,9 +209,25 @@ Profile (enable venv at startup): /etc/profile.d/ansible.sh
 Note, you can override choosen env by creating user config in 
 \$HOME/.ansible.sh
 -----------------------------------
-export ANSIBLE_VERSION="11.0.0"
-export ANSIBLE_HOME="/opt/ansible"
+export ANSIBLE_VERSION=11.3.0
+export ANSIBLE_HOME=/opt/ansible
 -----------------------------------
+
+Load config adhoc into current session, create env_file (myansible.sh):
+-----------------------------------
+export ANSIBLE_VERSION=11.3.0
+export ANSIBLE_HOME=/opt/ansible
+export ANSIBLE_VENV_PATH=/opt/ansible/apps/\$ANSIBLE_VERSION
+export PS1=\"(\$ANSIBLE_VERSION)[\u@\h \W]\$ \"
+
+if [ -d "\$ANSIBLE_VENV_PATH" ]; then
+    test -r "\$ANSIBLE_VENV_PATH/bin/activate" && source "\$ANSIBLE_VENV_PATH/bin/activate"
+fi
+-----------------------------------
+then source it when needed:
+. myansible.sh
+
+
 
 VIM config: /etc/vimrc.local
 
