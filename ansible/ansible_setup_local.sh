@@ -12,7 +12,7 @@
 
 # Define variables
 ANSIBLE_HOME="/opt/ansible"
-ANSIBLE_VERSION="11.4.0"
+ANSIBLE_VERSION="11.5.0"
 PYTHON_VERSION="3.12"
 ANSIBLE_VENV_PATH="${ANSIBLE_HOME}/apps/${ANSIBLE_VERSION}"
 PROFILE_SCRIPT="/etc/profile.d/ansible.sh"
