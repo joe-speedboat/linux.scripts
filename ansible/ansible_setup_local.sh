@@ -12,7 +12,7 @@
 
 # Define variables
 ANSIBLE_HOME="/opt/ansible"
-ANSIBLE_VERSION="11.5.0"
+ANSIBLE_VERSION="11.7.0"
 PYTHON_VERSION="3.12"
 ANSIBLE_VENV_PATH="${ANSIBLE_HOME}/apps/${ANSIBLE_VERSION}"
 PROFILE_SCRIPT="/etc/profile.d/ansible.sh"
@@ -25,7 +25,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Ensure its an rpm based system
-grep -q 'platform:el[89]' /etc/os-release
+grep -q 'platform:el[8|9|10]' /etc/os-release
 if [[ $? -ne 0 ]]; then
    echo "This is only for RHEL8 and RHEL9 like systems"
    exit 1
