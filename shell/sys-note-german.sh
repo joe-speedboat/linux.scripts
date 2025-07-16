@@ -1,9 +1,7 @@
 #!/bin/bash
 #########################################################################################
 # DESC: bash script to rapport work in /README file
-# $Revision: 1.2 $
-# $RCSfile: sys-note-german.sh,v $
-# $Author: chris $
+# Author: chris
 #########################################################################################
 # Copyright (c) Chris Ruettimann <chris@bitbull.ch>
 
@@ -17,15 +15,15 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 RFILE=/README
-GRP=betrieb
-GID=3000
+GRP=linuxeng
 
-# DO SOME INSTALLATION TASKS 
+stty sane
+stty erase '^H'
+
+# DO SOME INSTALLATION TASKS
 if [ ! -e $RFILE ]
 then
    touch $RFILE
-   grep -q :x:$GID: /etc/group || /usr/sbin/groupadd -g $GID $GRP
-   GRP=$(grep :x:$GID: /etc/group  | cut -d: -f1)
    chmod 660 $RFILE
    chown root:$GRP $RFILE
 fi
@@ -36,7 +34,7 @@ askme () {
    echo "
         HAVE YOU UPDATET THE $RFILE ???
         ---------------------------------
-   
+
         What do you want to do?
 
         a -> Add a new entry
@@ -65,14 +63,14 @@ askme () {
               echo '
                     zurueck zum menu mit <enter>'
               read R
-	      askme
+              askme
               ;;
         *)
               echo "depp"
               sleep 1
               askme
               ;;
-   esac                        
+   esac
 
 }
 
@@ -89,31 +87,31 @@ nentry () {
    NST=
    ED=
    SOL=
-   read -p  "   
+   read -p  "
    Datum [$DAY]: " NDAY
-   read -p  "   
+   read -p  "
    Zeit [$TIME]: " NTIME
-   read -p  "   
+   read -p  "
    User [$RUID]: " NRUID
-   read -p  "   
+   read -p  "
    Auftrag [$ERR]: " NERR
-   read -p  "   
+   read -p  "
    DownTime [$DT]: " NDT
-   read -p  "   
+   read -p  "
    WorkTime [$ST]: " NST
-   read -p  "   
+   read -p  "
    ErrorDesc : " ED
-   read -p  "   
+   read -p  "
    Solution: " SOL
-   
-   if [ $NDAY ] ; then DAY="$NDAY" ; fi   
-   if [ $NTIME ] ; then TIME="$NTIME" ; fi   
-   if [ $NRUID ] ; then RUID="$NRUID" ; fi   
-   if [ $NERR ] ; then ERR="$NERR" ; fi   
-   if [ $NDT ] ; then DT="$NDT" ; fi   
-   if [ $NST ] ; then ST="$NST" ; fi   
 
-   echo "$HOST;$DAY;$TIME;user=$RUID;grund=$ERR;dt=$DT;st=$ST;desc=$ED;done=$SOL" >> $RFILE 
+   if [ $NDAY ] ; then DAY="$NDAY" ; fi
+   if [ $NTIME ] ; then TIME="$NTIME" ; fi
+   if [ $NRUID ] ; then RUID="$NRUID" ; fi
+   if [ $NERR ] ; then ERR="$NERR" ; fi
+   if [ $NDT ] ; then DT="$NDT" ; fi
+   if [ $NST ] ; then ST="$NST" ; fi
+
+   echo "$HOST;$DAY;$TIME;user=$RUID;grund=$ERR;dt=$DT;st=$ST;desc=$ED;done=$SOL" >> $RFILE
 }
 
 help() {
@@ -134,31 +132,32 @@ help() {
    WorkTime  -> wie viel zeit wurde fuer die ausfuehrung der arbeit benoetigt
    ErrorDesc -> titel der die arbeit kurz umschreibt
                  z.B.: TE #SFR006961
-	 	       PR K6603
-		       RH Bug 509789
-		       tacMon URL w.domain.com
-		       tacMon /chroot 92%
+                       PR K6603
+                       RH Bug 509789
+                       tacMon URL w.domain.com
+                       tacMon /chroot 92%
    Solution: -> beschreibung der ausgeführen arbeit
                 z.B.: jkworker.properties waehrend hype zur fehlersuche angepasst
-		      kunde xy im apache reverse proxy erfasst
-		      ssl cert fuer domain xy ersetzt
+                      kunde xy im apache reverse proxy erfasst
+                      ssl cert fuer domain xy ersetzt
    "
 
 }
 
 cmdhelp(){
+RUID=`who am i | awk '{print $1}'`
 echo "
- aufruf: 
+ aufruf:
                  $(basename $0) [ optionen ]
 
  optionen:
    -a            springe direkt ins menu "neuer eintrag"
 
-   -x            ruft $(basename $0) auf, aber nur wenn es auf der letzten offenen 
+   -x            ruft $(basename $0) auf, aber nur wenn es auf der letzten offenen
                  console auf dem host ausgefuehrt wird, ideal für .bash_logout
-                 installation: echo \"$(which $(basename $0)) -x\" >> $HOME/.bash_logout
-                 
-                 wird keine option angegeben startet $(basename $0) 
+                 installation: echo \"$(which $(basename $0)) -x\" >> ~$RUID/.bash_logout
+
+                 wird keine option angegeben startet $(basename $0)
                  mit den standard menu
 
    -h|--help     ruft diese hilfe auf
@@ -178,7 +177,7 @@ then
 elif [ "$1" = "-x" ]
 then
    RUID=`who am i | awk '{print $1}'`
-   IN=`w | grep ^$RUID | wc -l`
+   IN=`who | grep ^$RUID | wc -l`
    if [ $IN -le 1 ]
    then
       askme
@@ -188,13 +187,3 @@ fi
 
 #START PROGRAM
 askme
-
-################################################################################
-# $Log: sys-note-german.sh,v $
-# Revision 1.2  2012/06/10 19:18:50  chris
-# auto backup
-#
-# Revision 1.1  2010/04/20 06:43:00  chris
-# Initial revision
-#
-
