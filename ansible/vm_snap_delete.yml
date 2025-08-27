@@ -1,0 +1,41 @@
+#!/usr/bin/env ansible-playbook 
+---
+- hosts: localhost
+  vars_prompt:
+    - name: vm_name
+      prompt: "Name of VM"
+      private: no
+  tasks:
+  - name: Get VM Snapshots
+    vmware_guest_snapshot_info:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      datacenter: "{{ vcenter_datacenter }}"
+      folder: "{{ vcenter_vm_folder}}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+    register: snapshot_info
+    delegate_to: localhost
+  - debug: var=snapshot_info.guest_snapshots.snapshots
+  - pause:
+      prompt: "Snapshot name to delete"
+      echo: yes
+    register: snapname_input
+  - set_fact:
+      snapname: "{{ snapname_input.user_input }}"
+  - name: Remove Snapshot
+    vmware_guest_snapshot:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      datacenter: "{{ vcenter_datacenter }}"
+      folder: "{{ vcenter_vm_folder}}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+      state: absent
+      snapshot_name: "{{ snapname }}"
+      quiesce: yes
+      memory_dump: yes
+    delegate_to: localhost
+

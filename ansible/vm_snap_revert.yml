@@ -1,0 +1,79 @@
+#!/usr/bin/env ansible-playbook 
+---
+- hosts: localhost
+  vars:
+  tasks:
+  - name: loop virtual machines
+    block:
+      - set_fact:
+          all_guest_names: []
+      - name: Get virtual machine names
+        vmware_vm_info:
+          hostname: "{{ vcenter_api_url }}"
+          username: "{{ vcenter_username }}"
+          password: "{{ vcenter_password }}"
+          datacenter: "{{ vcenter_datacenter }}"
+          folder: "{{ vcenter_vm_folder}}"
+          validate_certs: no
+        delegate_to: localhost
+        register: vm_info
+      - set_fact:
+          all_guest_names: "{{ all_guest_names + [ item.guest_name ] }}"
+        no_log: true
+        with_items:
+          - "{{ vm_info.virtual_machines | json_query(query) }}"
+        vars:
+          query: "[?guest_name]"
+
+  - name: print all virtual machine names
+    debug:
+      msg: "{{ all_guest_names }}"
+
+  - pause:
+      prompt: "Name of VM"
+      echo: yes
+    register: vm_name_input
+  - set_fact:
+      vm_name: "{{ vm_name_input.user_input }}"
+  - name: Get VM Snapshots
+    vmware_guest_snapshot_info:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      datacenter: "{{ vcenter_datacenter }}"
+      folder: "{{ vcenter_vm_folder}}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+    register: snapshot_info
+    delegate_to: localhost
+  - debug: var=snapshot_info.guest_snapshots.snapshots
+  - pause:
+      prompt: "Snapshot name to revert into"
+      echo: yes
+    register: snapname_input
+  - set_fact:
+      snapname: "{{ snapname_input.user_input }}"
+  - name: Revert Snapshot
+    vmware_guest_snapshot:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      datacenter: "{{ vcenter_datacenter }}"
+      folder: "{{ vcenter_vm_folder}}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+      state: revert
+      snapshot_name: "{{ snapname }}"
+      quiesce: yes
+      memory_dump: yes
+    delegate_to: localhost
+  - name: Power on VM
+    vmware_guest_powerstate:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+      state: powered-on
+    delegate_to: localhost
+

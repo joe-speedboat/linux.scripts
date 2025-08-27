@@ -1,0 +1,31 @@
+#!/usr/bin/env ansible-playbook 
+---
+- hosts: localhost
+  vars:
+  vars_prompt:
+    - name: vm_name
+      prompt: "Name of VM"
+      private: no
+    - name: snapname
+      prompt: "Name of snapshot"
+      private: no
+    - name: snapdesc
+      prompt: "Any comments"
+      private: no
+  tasks:
+  - name: Take snapshot of a VM using quiesce and memory flag on
+    vmware_guest_snapshot:
+      hostname: "{{ vcenter_api_url }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      datacenter: "{{ vcenter_datacenter }}"
+      folder: "{{ vcenter_vm_folder}}"
+      validate_certs: no
+      name: "{{ vm_name }}"
+      state: present
+      snapshot_name: "{{ snapname }}"
+      description: "{{ snapdesc }}"
+      quiesce: yes
+      memory_dump: yes
+    delegate_to: localhost
+
