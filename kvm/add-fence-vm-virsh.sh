@@ -91,7 +91,10 @@ exit 0
 ' > /home/$VM/bin/SMCLP
 
 # ------------------------- sudoers ----------------------------
-echo "$VM        ALL=       NOPASSWD: /usr/bin/virsh" >> /etc/sudoers
+#echo "$VM        ALL=       NOPASSWD: /usr/bin/virsh" >> /etc/sudoers
+echo "# sudoers file for fencing simulation
+$VM ALL=(ALL) NOPASSWD: /usr/bin/virsh destroy $VM, /usr/bin/virsh dominfo $VM, /usr/bin/virsh start $VM
+"
 
 echo '# .bashrc
 PS1="MP> "
@@ -106,6 +109,8 @@ chmod 755 /home/$VM/bin/*
 IF=$(ip r | grep default | awk '{print $5}')
 IP=$(ip addr show $IF | grep "inet " | awk '{print $2}' | cut -d'/' -f1)
 
+restorecon -FR /etc/ /home/ /usr/local
+
 echo "
 FENCE USER CREATED, CONFGURE ILO FENCING WITH THIS CREDENTIALS
 ---------------------------------------------------------------
@@ -114,15 +119,10 @@ IP: $IP
 User: $VM
 Password: $PW
 
+You can add it to pacemaker cluster with:
+pcs stonith create stonith-nfs1a fence_ilo_ssh ip="$IP" username="$VM" password="$PW" pcmk_host_map="$VM.domain.tld:$VM.domain.tld" ssh=true
+
 finished
 "
 
-##########################################################################################################
-# $Log: add-fence-vm.sh,v $
-# Revision 1.2  2017/09/03 09:32:05  chris
-# added sudo config auto add
-#
-# Revision 1.1  2016/10/09 10:31:46  chris
-# Initial revision
-#
 
