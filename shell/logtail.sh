@@ -26,17 +26,3 @@ COFFSET=`cat $LOGF | wc -c` # get current logfile size
 cat $LOGF | dd  bs=1 skip=$LOFFSET conv=noerror 2>/dev/null | cat | strings
 echo $COFFSET > $LOGT || (echo ERROR: can not write $LOGF ; exit 1) # write new file size
 
-###########################################################
-# $Log: logtail.sh,v $
-# Revision 1.4  2017/06/16 13:36:30  chris
-# lean up code :-)
-#
-# Revision 1.3  2017/06/16 11:03:22  chris
-# error handling
-#
-# Revision 1.2  2017/06/16 11:00:32  chris
-# add some comments
-#
-# Revision 1.1  2017/06/16 10:50:25  chris
-# Initial revision
-#
