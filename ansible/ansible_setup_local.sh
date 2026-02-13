@@ -106,7 +106,6 @@ then
   sed -i 's|^;log_path=.*|log_path='"${ANSIBLE_HOME}/logs/ansible.log"'|' ${ANSIBLE_HOME}/ansible.cfg
   sed -i 's|^;host_key_checking=.*|host_key_checking=False|' ${ANSIBLE_HOME}/ansible.cfg
   sed -i 's|^;retry_files_enabled=.*|retry_files_enabled=False|' ${ANSIBLE_HOME}/ansible.cfg
-  sed -i 's|^;stdout_callback=.*|stdout_callback=yaml|' ${ANSIBLE_HOME}/ansible.cfg
   sed -i 's|^;deprecation_warnings=.*|deprecation_warnings=False|' ${ANSIBLE_HOME}/ansible.cfg
   sed -i 's|^;interpreter_python=.*|interpreter_python=auto_silent|' ${ANSIBLE_HOME}/ansible.cfg
   sed -i 's|^;pipelining=.*|pipelining=True|' ${ANSIBLE_HOME}/ansible.cfg
