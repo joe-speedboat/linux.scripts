@@ -58,6 +58,7 @@ echo "Initializing Ansible home directory: $ANSIBLE_HOME"
 mkdir -p "${ANSIBLE_HOME}/apps"
 mkdir -p "${ANSIBLE_HOME}/inventory"
 mkdir -p "${ANSIBLE_HOME}/logs"
+mkdir -p "${ANSIBLE_HOME}/tmp"
 mkdir -p "${ANSIBLE_HOME}/playbooks"
 mkdir -p "${ANSIBLE_HOME}/projects"
 
