@@ -22,12 +22,31 @@ function print_help() {
     echo "Options:"
     echo "-h|--help                  : print help info"
     echo "-s|--show                  : print formatted output of vgs, lvs and df"
+    echo "-a|--align                 : rescan and align sda3 partition and PV to new disk size (after VM disk grow)"
     echo "-g <lv_path> <size to add> : grow a lv and its filesystem"
     echo "    <lv_path>     : absolute lv name (/dev/VG0/root)"
     echo "    <size to add> : size to add (1g)"
     echo "Examples:"
     echo "   $(basename $0) -s"
     echo "   $(basename $0) -g /dev/vg0/lvname 5g"
+    echo "   $(basename $0) -a"
+}
+
+function align_disk() {
+    echo "WARNING: You are about to modify the data disk."
+    echo "Please make a snapshot first, then hit <ENTER> to continue or <CTRL>+<C> to exit."
+    read
+    echo "Rescanning SCSI bus for sda..."
+    echo 1 > /sys/class/block/sda/device/rescan 2>&1 | sed 's/^/   /'
+    echo "Aligning partition sda3 to 100% using parted..."
+    parted -s -f /dev/sda resizepart 3 100% yes 2>&1 | sed 's/^/   /' | grep -v -e 'Warning: Not all of the space available to /dev/sda' -e 'Fixing, due to --fix'
+    echo "Resizing PV on /dev/sda3..."
+    pvresize /dev/sda3 2>&1 | sed 's/^/   /'
+    echo ""
+    echo "SHOW CURRENT STATE:"
+    show
+    echo ""
+    echo "IMPORTANT: Please reboot the VM before you left for best practice and to ensure all changes are persistent."
 }
 
 function show() {
@@ -94,40 +113,51 @@ else
     while (( "$#" )); do
         case "$1" in
             -h|--help)
+                if [ "$#" -ne 1 ]; then
+                    print_help
+                    exit 1
+                fi
                 print_help
                 shift
                 ;;
             -s|--show)
+                if [ "$#" -ne 1 ]; then
+                    print_help
+                    exit 1
+                fi
                 show
                 shift
                 ;;
             -g|--grow)
-                if [ -z "$2" ] || [ -z "$3" ]; then
-                    echo "Error: Missing arguments for -g option. Please provide the lv_name and size to add."
+                if [ "$#" -ne 3 ]; then
                     print_help
                     exit 1
                 fi
                 lv_name=$2
                 size_to_add=$3
                 if ! lvs $lv_name > /dev/null 2>&1; then
-                    echo "Error: Invalid lv_name. Please provide an existing logical volume."
                     print_help
                     exit 1
                 fi
                 if ! [[ $size_to_add =~ ^[0-9]+[gm]$ ]]; then
-                    echo "Error: Invalid size_to_add. Please provide a valid size to add (e.g., 10g, 500m)."
                     print_help
                     exit 1
                 fi
                 grow $lv_name $size_to_add
                 shift 3
                 ;;
+            -a|--align)
+                if [ "$#" -ne 1 ]; then
+                    print_help
+                    exit 1
+                fi
+                align_disk
+                shift
+                ;;
             *)
-                echo "Invalid option: $1" >&2
                 print_help
                 shift
                 ;;
         esac
     done
 fi
-
