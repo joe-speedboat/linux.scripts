@@ -8,7 +8,38 @@
 # http://www.gnu.org/licenses/gpl.txt
 #
 # Foreman API DOC: https://foreman.domain.tld/apidoc
-# 
+#
+# Description:
+#   This Ansible playbook automates the process of publishing a new version
+#   of a Foreman/Katello content view and promoting it to a specified
+#   lifecycle environment.
+#
+#   The workflow consists of:
+#   1. Fetching the content view ID by name.
+#   2. Fetching the target lifecycle environment ID by name.
+#   3. Publishing a new version of the content view.
+#   4. Polling the publish task until completion.
+#   5. Extracting the new content view version ID.
+#   6. Promoting the new content view version to the target lifecycle environment.
+#   7. Polling the promote task until completion.
+#
+# Prerequisites:
+#   - Ansible installed and configured.
+#   - Valid Foreman/Katello credentials with appropriate permissions.
+#   - The specified content view and lifecycle environment must exist in Foreman.
+#   - Network connectivity to the Foreman server.
+#
+# Usage:
+#   ansible-playbook foreman_contentViewPublishAndPromote.yml
+#
+# Variables:
+#   validate_certs:       Set to 'True' if you want to validate SSL certificates (default: False)
+#   foremanUser:          Foreman API username (default: 'admin')
+#   foremanPassword:      Foreman API password (default: 'xxxx')
+#   foremanUrl:           Foreman server URL (default: 'https://foreman.domain.tld')
+#   contentViewName:      Name of the content view to publish (default: 'cv_rocky10')
+#   lifecycleEnvironmentName: Name of the target lifecycle environment (default: 'LcTest')
+#
 - hosts: localhost
   gather_facts: no
   vars:
@@ -19,6 +50,7 @@
     contentViewName: 'cv_rocky10'
     lifecycleEnvironmentName: 'LcTest'
   tasks:
+    # Step 1: Retrieve the list of content views and find the ID for the specified name
     - name: Get the content view ID
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
@@ -31,12 +63,15 @@
         status_code: 200
         validate_certs: "{{ validate_certs }}"
       register: contentViewResult
+
+    # Step 2: Extract the content view ID from the results
     - name: define contentViewId
       set_fact:
         contentViewId: "{{ item.id }}"
       with_items: "{{ contentViewResult.json.results }}"
       when: item.name == contentViewName
 
+    # Step 3: Retrieve the list of lifecycle environments and find the ID for the specified name
     - name: Get the lifecycle environment ID
       uri:
         url: "{{ foremanUrl }}/katello/api/environments"
@@ -49,12 +84,15 @@
         url_password: "{{ foremanPassword }}"
         validate_certs: "{{ validate_certs }}"
       register: lifecycleEnvironmentResult
+
+    # Step 4: Extract the lifecycle environment ID from the results
     - name: define lifecycleEnvironmentId
       set_fact:
         lifecycleEnvironmentId: "{{ item.id }}"
       with_items: "{{ lifecycleEnvironmentResult.json.results }}"
       when: item.name == lifecycleEnvironmentName
 
+    # Step 5: Trigger the publish action for the content view
     - name: Publish a new version of content view
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views/{{ contentViewId }}/publish"
@@ -67,6 +105,7 @@
         validate_certs: "{{ validate_certs }}"
       register: publishTask
 
+    # Step 6: Poll the publish task until it completes or times out
     - name: Poll until publish task is complete
       uri:
         url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ publishTask.json.id }}"
@@ -82,10 +121,12 @@
       retries: 30
       delay: 10
 
+    # Step 7: Extract the content view version ID from the publish task response
     - name: define contentViewVersionId
       set_fact:
         contentViewVersionId: "{{ publishTask.json.input.content_view_version_id }}"
 
+    # Step 8: Trigger the promote action to move the content view version to the target lifecycle environment
     - name: Promote a content view version to a lifecycle environment
       uri:
         url: "{{ foremanUrl }}/katello/api/content_view_versions/{{ contentViewVersionId }}/promote"
@@ -101,6 +142,7 @@
         validate_certs: "{{ validate_certs }}"
       register: promoteTask
 
+    # Step 9: Poll the promote task until it completes or times out
     - name: Poll until promote task is complete
       uri:
         url: "{{ foremanUrl }}/foreman_tasks/api/tasks/{{ promoteTask.json.id }}"
