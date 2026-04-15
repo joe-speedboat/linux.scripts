@@ -10,14 +10,14 @@
 # This playbook is used to delete a specific version of a content view in Foreman.
 # It first retrieves all versions of the content view, checks if any version has no assigned CVS,
 # and if so, deletes the version with the lowest id.
-# 
+#
 # Foreman API DOC: https://foreman.domain.tld/apidoc
 # -----------------------------------------------------------------------
 # Variables:
 # - validate_certs: Whether to validate SSL certificates. Set to False if using self-signed certificates.
 # - foremanUser: The username to authenticate with Foreman API.
-# - foremanPassword: "xxxx"
-# - foremanUrl: "https://foreman.domain.tld"
+# - foremanPassword: The password to authenticate with Foreman API.
+# - foremanUrl: The URL of the Foreman server.
 # - contentViewName: The name of the content view to delete a version from.
 # - failIfEmpty: Whether to fail the playbook if there are no versions to delete.
 # - doDebug: Whether to print debug information.
@@ -26,18 +26,18 @@
 - hosts: localhost
   gather_facts: yes
   vars:
-   validate_certs: False
-   foremanUser: 'admin'
-   foremanPassword: "xxxx"
-   foremanUrl: "https://foreman.domain.tld"
-   contentViewName: 'cv_rocky9'
-   failIfEmpty: False
-   doDebug: True
-   protectDays: 90
+    validate_certs: False
+    foremanUser: 'admin'
+    foremanPassword: 'xxx'
+    foremanUrl: 'https://foreman.domain.tld'
+    contentViewName: 'cv_rocky10'
+    failIfEmpty: False
+    doDebug: True
+    protectDays: 90
   tasks:
     - name: Calculate the date protectDays ago
       set_fact:
-        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - ((protectDays|int) * 24 * 60 * 60)) }}"
+        protectDate: "{{ '%Y-%m-%d' | strftime((ansible_date_time.epoch | int) - ((protectDays | int) * 24 * 60 * 60)) }}"
     - name: Retrieve all versions of the specified content view
       uri:
         url: "{{ foremanUrl }}/katello/api/content_views"
@@ -46,6 +46,7 @@
         url_username: "{{ foremanUser }}"
         url_password: "{{ foremanPassword }}"
         return_content: yes
+        timeout: 60
         body_format: json
         status_code: 200
         validate_certs: "{{ validate_certs }}"
@@ -58,17 +59,26 @@
       when: item.name == contentViewName
       no_log: "{{ not doDebug }}"
 
+
     - name: Select the content view with the lowest id
       set_fact:
-        oldest_version: "{{ contentViewResult.json.results | selectattr('name', 'equalto', contentViewName) | map(attribute='versions') | list | sort(attribute='id') | last | last }}"
+        oldest_version: >-
+          {{
+            contentViewResult.json.results
+            | selectattr('name', 'equalto', contentViewName)
+            | map(attribute='versions')
+            | first
+            | sort(attribute='published')
+            | first
+          }}
 
     - name: Set doDelete to false by default
       set_fact:
         doDelete: False
-    - name: Set doDelete to true if the last content view version id has 'environment_ids' [] and published date is older than protectDays
+    - name: Set doDelete to true if the last content view id has 'environment_ids' [] and published date is older than protectDays
       set_fact:
         doDelete: True
-      when: 
+      when:
         - oldest_version.environment_ids | length == 0
         - oldest_version.published.split(' ')[0] < protectDate
 
@@ -84,10 +94,10 @@
       register: deleteTask
       when: doDelete
 
-#    - name: Print deleteTask
-#      debug:
-#        var: deleteTask
-#      when: doDebug
+    - name: Print deleteTask
+      debug:
+        var: deleteTask
+      when: doDebug
 
     - name: Poll the Foreman API to check the status of the deletion
       uri:
@@ -97,6 +107,7 @@
         url_username: "{{ foremanUser }}"
         url_password: "{{ foremanPassword }}"
         return_content: yes
+        timeout: 60
         body_format: json
         status_code: 200
         validate_certs: "{{ validate_certs }}"
@@ -118,14 +129,12 @@
 
     - name: Print debug information if doDebug is set to True
       debug:
-        msg: 
+        msg:
         - "contentViewName={{ contentViewName }}"
-        - "contentViewId={{ contentViewId }}"
         - "oldest_version={{ oldest_version }}"
         - "doDelete={{ doDelete }}"
         - "failIfEmpty={{ failIfEmpty }}"
         - "protectDate={{ protectDate }}"
         - "oldest_version.published={{ oldest_version.published.split(' ')[0] }}"
       when: doDebug
-
 ...
