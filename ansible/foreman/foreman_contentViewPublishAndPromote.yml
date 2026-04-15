@@ -34,11 +34,11 @@
 #
 # Variables:
 #   validate_certs:       Set to 'True' if you want to validate SSL certificates (default: False)
-#   foremanUser:          Foreman API username (default: 'admin')
-#   foremanPassword:      Foreman API password (default: 'xxxx')
-#   foremanUrl:           Foreman server URL (default: 'https://foreman.domain.tld')
-#   contentViewName:      Name of the content view to publish (default: 'cv_rocky10')
-#   lifecycleEnvironmentName: Name of the target lifecycle environment (default: 'LcTest')
+#   foremanUser:          Foreman API username
+#   foremanPassword:      Foreman API password
+#   foremanUrl:           Foreman server URL
+#   contentViewName:      Name of the content view to publish
+#   lifecycleEnvironmentName: Name of the target lifecycle environment
 #
 - hosts: localhost
   gather_facts: no
