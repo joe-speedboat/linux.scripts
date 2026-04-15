@@ -16,7 +16,7 @@
     foremanUser: 'admin'
     foremanPassword: "xxxx"
     foremanUrl: "https://foreman.domain.tld"
-    contentViewName: 'cv_rocky9'
+    contentViewName: 'cv_rocky10'
     lifecycleEnvironmentName: 'LcTest'
   tasks:
     - name: Get the content view ID
@@ -36,7 +36,7 @@
         contentViewId: "{{ item.id }}"
       with_items: "{{ contentViewResult.json.results }}"
       when: item.name == contentViewName
-  
+
     - name: Get the lifecycle environment ID
       uri:
         url: "{{ foremanUrl }}/katello/api/environments"
