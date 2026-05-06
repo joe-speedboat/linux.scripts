@@ -1,4 +1,4 @@
-plugin: vmware.vmware.vms
+plugin: community.vmware.vmware_vm_inventory
 strict: False
 hostname: vmpvc-01.domain.local
 username: 'api_ro@vsphere.local'
@@ -19,11 +19,11 @@ filters:
   config.name.lower().startswith('lab-') or
   config.name.lower().endswith('-lab') or
   config.name.lower().endswith('_lab')
-  )
+  )       
 
 with_path: False
 with_tags: True
-with_sanitized_property_names: True
+with_sanitized_property_name: True
 
 groups:
 
