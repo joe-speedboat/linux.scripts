@@ -14,6 +14,10 @@
 """
 Ansible Dynamic Inventory Script for FreeIPA.
 
+Behavior:
+  - Hostgroups with no hosts are still listed in the inventory (may be used for group vars or maintenance).
+  - Any host not in any group will be listed under the special "ungrouped" group, following Ansible convention.
+
 Environment variables:
   freeipaserver / FREEIPASERVER
       Comma-separated list of FreeIPA servers, e.g.:
@@ -35,10 +39,83 @@ Environment variables:
       CA bundle path, used when CERT_VERIFY is unset or true
 
   freeipaconnecttimeout / FREEIPA_CONNECT_TIMEOUT
-      Connect timeout in seconds (default: 5)
+      Connect timeout in seconds (default: 2.0)
 
   freeipareadtimeout / FREEIPA_READ_TIMEOUT
       Read timeout in seconds (default: 30)
+
+  -d / --debug
+      Enable debug output (prints API connect/response times, cache operations, total API time, script execution time, etc.)
+
+Main Classes and Functions:
+---------------------------
+- class InventoryError(Exception)
+- class ConfigurationError(InventoryError)
+- class CacheError(InventoryError)
+- class FreeIPATransportError(InventoryError)
+- class FreeIPAProtocolError(InventoryError)
+- class FreeIPAAPIError(InventoryError)
+
+- getenv_first(*names: str, default: Optional[str] = None) -> Optional[str]
+    Return the first set environment variable from a list of names.
+
+- parse_timeout(raw: Optional[str], default: float, env_name: str) -> float
+    Parse a timeout value from string, with validation.
+
+- parse_cert_verify() -> Union[bool, str]
+    Parse certificate verification policy from environment.
+
+- first_value(value: Any) -> Optional[Any]
+    Return the first value from a list, or the value itself.
+
+- dedupe_preserve_order(items: Iterable[str]) -> List[str]
+    Remove duplicates from a list while preserving order.
+
+- validate_inventory(data: Any) -> Dict[str, Any]
+    Validate the structure of the inventory data.
+
+- load_cache(path: str, ttl: int) -> Optional[Dict[str, Any]]
+    Load inventory from cache file if not expired.
+
+- write_cache_atomic(path: str, data: Dict[str, Any]) -> None
+    Write inventory data to cache file atomically.
+
+- class FreeIPAClient
+    - __init__(...)
+    - timeout (property)
+    - _build_session()
+    - _transport_exc(context, exc)
+    - _json_rpc(session, server, method, args, options)
+    - _login(server)
+    - authenticate()
+    - call(method, args, options)
+
+- require_complete_find(method: str, result: Dict[str, Any]) -> List[Dict[str, Any]]
+    Ensure a FreeIPA find result is complete (not truncated).
+
+- get_all_hosts(client: FreeIPAClient) -> List[Dict[str, Any]]
+    Get all hosts from FreeIPA.
+
+- get_hostgroups(client: FreeIPAClient) -> List[Dict[str, Any]]
+    Get all hostgroups from FreeIPA.
+
+- get_hosts_in_group(client: FreeIPAClient, group_name: str, visited: Optional[set[str]] = None) -> List[str]
+    Recursively get all hosts in a hostgroup (including nested groups).
+
+- build_inventory(client: FreeIPAClient) -> Dict[str, Any]
+    Build the Ansible inventory structure from FreeIPA data.
+
+- generate_inventory() -> Dict[str, Any]
+    Main function to generate inventory, using cache if possible.
+
+- main() -> int
+    CLI entry point. In debug mode (-d), prints API timings and script execution time.
+
+Global Variables:
+-----------------
+- DEBUG: Enable debug output if True.
+- TOTAL_API_TIME: Accumulates total API request time (seconds) for reporting in debug mode.
+
 """
 
 from __future__ import annotations
@@ -49,6 +126,8 @@ import os
 import sys
 import tempfile
 import time
+import datetime
+import logging
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import requests
@@ -57,9 +136,16 @@ from requests import Session
 CACHE_TIME_SEC = 3600
 CACHE_FILE = os.path.expanduser("~/.ansible_freeipa.cache")
 
-DEFAULT_CONNECT_TIMEOUT = 5.0
+DEFAULT_CONNECT_TIMEOUT = 2.0
 DEFAULT_READ_TIMEOUT = 30.0
 DEFAULT_CERT_VERIFY = True
+
+DEBUG = False
+
+# Track total API request time (seconds)
+TOTAL_API_TIME = 0.0
+
+logger = logging.getLogger("ansible_dynamic_inventory_freeipa")
 
 RESERVED_GROUPS = {"_meta", "all", "ungrouped"}
 
@@ -191,19 +277,32 @@ def validate_inventory(data: Any) -> Dict[str, Any]:
 
 def load_cache(path: str, ttl: int) -> Optional[Dict[str, Any]]:
     if not os.path.exists(path):
+        if DEBUG:
+            logger.debug(f"cache read: {path} (not found)")
         return None
 
     try:
-        if time.time() - os.path.getmtime(path) >= ttl:
+        cache_age = time.time() - os.path.getmtime(path)
+        if cache_age >= ttl:
+            if DEBUG:
+                logger.debug(f"cache read: {path} (expired, age={cache_age:.2f}s)")
             return None
+        if DEBUG:
+            logger.debug(f"cache read: {path} (age={cache_age:.2f}s)")
     except OSError:
+        if DEBUG:
+            logger.debug(f"cache read: {path} (oserror)")
         return None
 
     try:
         with open(path, "r", encoding="utf-8") as handle:
             data = json.load(handle)
+        if DEBUG:
+            logger.debug(f"cache read: {path} (success)")
         return validate_inventory(data)
     except (OSError, json.JSONDecodeError, CacheError):
+        if DEBUG:
+            logger.debug(f"cache read: {path} (invalid)")
         return None
 
 
@@ -229,6 +328,8 @@ def write_cache_atomic(path: str, data: Dict[str, Any]) -> None:
             os.chmod(path, 0o600)
         except OSError:
             pass
+        if DEBUG:
+            logger.debug(f"cache write/update: {path} (success)")
     finally:
         if os.path.exists(tmp_path):
             try:
@@ -283,6 +384,7 @@ class FreeIPAClient:
         args: Optional[Sequence[Any]] = None,
         options: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        global DEBUG, TOTAL_API_TIME
         payload = {
             "method": method,
             "params": [list(args or []), dict(options or {})],
@@ -293,6 +395,7 @@ class FreeIPAClient:
             "Accept": "application/json",
         }
 
+        api_start = time.time()
         try:
             response = session.post(
                 f"https://{server}/ipa/session/json",
@@ -306,6 +409,11 @@ class FreeIPAClient:
             raise self._transport_exc(f"Timeout during {method}", exc) from exc
         except requests.RequestException as exc:
             raise self._transport_exc(f"Transport failure during {method}", exc) from exc
+        api_end = time.time()
+        api_duration = api_end - api_start
+        TOTAL_API_TIME += api_duration
+        if DEBUG:
+            logger.debug(f"api response time: {api_duration:.3f}s (server={server}, method={method})")
 
         if response.status_code != 200:
             raise FreeIPAProtocolError(f"{method} returned HTTP {response.status_code}")
@@ -328,6 +436,7 @@ class FreeIPAClient:
         return result
 
     def _login(self, server: str) -> Session:
+        global DEBUG
         session = self._build_session()
         url = f"https://{server}/ipa/session/login_password"
         headers = {
@@ -337,6 +446,7 @@ class FreeIPAClient:
         }
         data = {"user": self.username, "password": self.password}
 
+        connect_start = time.time()
         try:
             response = session.post(
                 url,
@@ -350,6 +460,9 @@ class FreeIPAClient:
             raise self._transport_exc("Login timeout", exc) from exc
         except requests.RequestException as exc:
             raise self._transport_exc("Login transport failure", exc) from exc
+        connect_end = time.time()
+        if DEBUG:
+            logger.debug(f"api connect time: {connect_end - connect_start:.3f}s (server={server})")
 
         if response.status_code != 200:
             raise FreeIPAProtocolError(f"Login returned HTTP {response.status_code}")
@@ -434,7 +547,7 @@ class FreeIPAClient:
         raise InventoryError(f"All FreeIPA servers failed during {method}. " + "; ".join(errors))
 
 
-def require_complete_find(method: str, result: Dict[str, Any]) -> List[Dict[str, Any]]:
+def require_complete_find(method: str, result: Dict[str, Any], context: Optional[str] = None) -> List[Dict[str, Any]]:
     if result.get("truncated") is True:
         raise InventoryError(
             f"{method} returned a truncated result set. Refusing to emit incomplete inventory."
@@ -443,17 +556,20 @@ def require_complete_find(method: str, result: Dict[str, Any]) -> List[Dict[str,
     items = result.get("result")
     if not isinstance(items, list):
         raise InventoryError(f"{method} returned invalid result list")
+    if DEBUG:
+        ctx = f" ({context})" if context else ""
+        logger.debug(f"{method}{ctx}: returned {len(items)} items")
     return items
 
 
 def get_all_hosts(client: FreeIPAClient) -> List[Dict[str, Any]]:
     result = client.call("host_find", options={"sizelimit": 0})
-    return require_complete_find("host_find", result)
+    return require_complete_find("host_find", result, context="all hosts")
 
 
 def get_hostgroups(client: FreeIPAClient) -> List[Dict[str, Any]]:
     result = client.call("hostgroup_find", options={"sizelimit": 0})
-    return require_complete_find("hostgroup_find", result)
+    return require_complete_find("hostgroup_find", result, context="all hostgroups")
 
 
 def get_hosts_in_group(
@@ -476,6 +592,9 @@ def get_hosts_in_group(
 
     hosts = list(group_data.get("member_host", []) or [])
     nested_groups = list(group_data.get("member_hostgroup", []) or [])
+
+    if DEBUG:
+        logger.debug(f"hostgroup_show ({group_name}): returned {len(hosts)} hosts, {len(nested_groups)} nested groups")
 
     for nested_group in nested_groups:
         hosts.extend(get_hosts_in_group(client, nested_group, visited))
@@ -581,23 +700,55 @@ def generate_inventory() -> Dict[str, Any]:
 
 
 def main() -> int:
+    global DEBUG, TOTAL_API_TIME
     parser = argparse.ArgumentParser(
         description="Generate Ansible dynamic inventory from FreeIPA"
     )
     parser.add_argument("--list", action="store_true", help="Output full inventory")
     parser.add_argument("--host", help="Compatibility mode, returns empty JSON")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args()
 
+    DEBUG = args.debug
+
+    # Configure logging
+    if DEBUG:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s %(levelname)s %(message)s",
+            stream=sys.stderr,
+        )
+        logger.debug(f"DEBUG enabled at {datetime.datetime.now().isoformat()}")
+    else:
+        logging.basicConfig(
+            level=logging.WARNING,
+            format="%(asctime)s %(levelname)s %(message)s",
+            stream=sys.stderr,
+        )
+
+    script_start = time.time()
     try:
         if args.list:
             print(json.dumps(generate_inventory(), indent=4, sort_keys=True))
+            script_end = time.time()
+            if DEBUG:
+                logger.debug(f"Total API request time: {TOTAL_API_TIME:.3f}s")
+                logger.debug(f"Script execution time: {script_end - script_start:.3f}s")
             return 0
 
         if args.host is not None:
             print(json.dumps({}))
+            script_end = time.time()
+            if DEBUG:
+                logger.debug(f"Total API request time: {TOTAL_API_TIME:.3f}s")
+                logger.debug(f"Script execution time: {script_end - script_start:.3f}s")
             return 0
 
         print(json.dumps({}))
+        script_end = time.time()
+        if DEBUG:
+            logger.debug(f"Total API request time: {TOTAL_API_TIME:.3f}s")
+            logger.debug(f"Script execution time: {script_end - script_start:.3f}s")
         return 0
 
     except InventoryError as exc:
