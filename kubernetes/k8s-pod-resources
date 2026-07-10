@@ -1,0 +1,407 @@
+#!/usr/bin/env bash
+#
+# k8s-pod-resources
+#
+# Display Kubernetes Pod resource requests, current usage, and limits for
+# CPU and memory across all namespaces.
+#
+# CPU values are normalized to millicores.
+# Memory values are normalized to MiB.
+#
+# Current usage is retrieved from the Kubernetes Metrics API through:
+#
+#   kubectl top pods
+#
+# Resource requests and limits are retrieved from the Pod specifications.
+#
+# Copyright (c) Chris Ruettimann <chris@bitbull.ch>
+# This software is licensed to you under the GNU General Public License.
+# There is NO WARRANTY for this software, express or
+# implied, including the implied warranties of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
+# along with this software; if not, see
+# http://www.gnu.org/licenses/gpl.txt
+#
+# Requirements:
+#
+#   - bash
+#   - kubectl
+#   - jq
+#   - awk
+#   - sort
+#   - Kubernetes Metrics Server
+#
+# Installation:
+#
+#   cp k8s-pod-resources /usr/local/bin/k8s-pod-resources
+#   chmod +x /usr/local/bin/k8s-pod-resources
+#
+# Usage:
+#
+#   k8s-pod-resources
+#
+# Output columns:
+#
+#   NAMESPACE
+#       Kubernetes namespace containing the Pod.
+#
+#   POD
+#       Pod name.
+#
+#   STATUS
+#       Current Pod phase, such as Running, Pending, or Succeeded.
+#
+#   CPU-REQ
+#       Sum of CPU requests for all regular containers in the Pod.
+#
+#   CPU-USE
+#       Current CPU usage reported by Metrics Server.
+#
+#   CPU-LIMIT
+#       Sum of CPU limits for all regular containers in the Pod.
+#
+#   CPU REQ/USE
+#       Ratio between requested CPU and current CPU usage.
+#
+#   MEM-REQ
+#       Sum of memory requests for all regular containers in the Pod.
+#
+#   MEM-USE
+#       Current memory usage reported by Metrics Server.
+#
+#   MEM-LIMIT
+#       Sum of memory limits for all regular containers in the Pod.
+#
+#   MEM REQ/USE
+#       Ratio between requested memory and current memory usage.
+#
+# Notes:
+#
+#   - The output is sorted by CPU request in descending order.
+#
+#   - Current usage represents a single Metrics Server sample. It does not
+#     represent historical, average, or peak usage.
+#
+#   - Pods without current Metrics Server data, including Pending and
+#     Succeeded Pods, display zero usage and "-" for the request/usage ratio.
+#
+#   - CPU and memory requests affect Kubernetes scheduling decisions.
+#     Resource limits do not reserve node capacity.
+#
+#   - Init container resources are not included because Kubernetes calculates
+#     effective Pod requests differently for init containers. This report
+#     intentionally displays the sum of regular application containers.
+#
+
+set -euo pipefail
+
+readonly PROGRAM_NAME="${0##*/}"
+
+usage() {
+    cat <<EOF
+Usage: ${PROGRAM_NAME}
+
+Display CPU and memory requests, current usage, and limits for all Kubernetes
+Pods across all namespaces.
+
+Requirements:
+  kubectl
+  jq
+  awk
+  sort
+  Kubernetes Metrics Server
+
+Options:
+  -h, --help    Display this help message
+EOF
+}
+
+error() {
+    printf 'ERROR: %s\n' "$*" >&2
+}
+
+check_command() {
+    local command_name="$1"
+
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        error "Required command not found: ${command_name}"
+        exit 1
+    fi
+}
+
+case "${1:-}" in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    "")
+        ;;
+    *)
+        error "Unknown argument: $1"
+        printf '\n' >&2
+        usage >&2
+        exit 1
+        ;;
+esac
+
+check_command kubectl
+check_command jq
+check_command awk
+check_command sort
+check_command mktemp
+
+if ! kubectl cluster-info >/dev/null 2>&1; then
+    error "Unable to connect to the Kubernetes cluster."
+    exit 1
+fi
+
+tmp_usage="$(mktemp)"
+trap 'rm -f "$tmp_usage"' EXIT INT TERM
+
+#
+# Retrieve current Pod usage from Metrics Server.
+#
+# Expected columns:
+#
+#   namespace
+#   pod
+#   CPU usage
+#   memory usage
+#
+if ! kubectl top pods -A --no-headers 2>/dev/null |
+    awk '{print $1 "\t" $2 "\t" $3 "\t" $4}' > "$tmp_usage"
+then
+    error "Unable to retrieve Pod metrics."
+    error "Verify that Metrics Server is installed and available."
+    exit 1
+fi
+
+#
+# Retrieve Pod requests and limits.
+#
+# CPU values are converted to millicores.
+# Memory values are converted to MiB.
+#
+kubectl get pods -A -o json |
+jq -r '
+    def cpu_m:
+        if . == null or . == "" then
+            0
+        elif test("n$") then
+            sub("n$"; "") | tonumber / 1000000
+        elif test("u$") then
+            sub("u$"; "") | tonumber / 1000
+        elif test("m$") then
+            sub("m$"; "") | tonumber
+        else
+            tonumber * 1000
+        end;
+
+    def mem_mi:
+        if . == null or . == "" then
+            0
+        elif test("Ki$") then
+            sub("Ki$"; "") | tonumber / 1024
+        elif test("Mi$") then
+            sub("Mi$"; "") | tonumber
+        elif test("Gi$") then
+            sub("Gi$"; "") | tonumber * 1024
+        elif test("Ti$") then
+            sub("Ti$"; "") | tonumber * 1048576
+        elif test("K$") then
+            sub("K$"; "") | tonumber * 1000 / 1048576
+        elif test("M$") then
+            sub("M$"; "") | tonumber * 1000000 / 1048576
+        elif test("G$") then
+            sub("G$"; "") | tonumber * 1000000000 / 1048576
+        elif test("T$") then
+            sub("T$"; "") | tonumber * 1000000000000 / 1048576
+        else
+            tonumber / 1048576
+        end;
+
+    .items[]
+    | [
+        .metadata.namespace,
+        .metadata.name,
+        .status.phase,
+
+        (
+            [.spec.containers[]?.resources.requests.cpu]
+            | map(cpu_m)
+            | add // 0
+        ),
+
+        (
+            [.spec.containers[]?.resources.limits.cpu]
+            | map(cpu_m)
+            | add // 0
+        ),
+
+        (
+            [.spec.containers[]?.resources.requests.memory]
+            | map(mem_mi)
+            | add // 0
+        ),
+
+        (
+            [.spec.containers[]?.resources.limits.memory]
+            | map(mem_mi)
+            | add // 0
+        )
+    ]
+    | @tsv
+' |
+awk -v usage_file="$tmp_usage" '
+    function cpu_m(value) {
+        if (value == "" || value == "<unknown>") {
+            return 0
+        }
+
+        if (value ~ /n$/) {
+            sub(/n$/, "", value)
+            return value / 1000000
+        }
+
+        if (value ~ /u$/) {
+            sub(/u$/, "", value)
+            return value / 1000
+        }
+
+        if (value ~ /m$/) {
+            sub(/m$/, "", value)
+            return value + 0
+        }
+
+        return value * 1000
+    }
+
+    function mem_mi(value) {
+        if (value == "" || value == "<unknown>") {
+            return 0
+        }
+
+        if (value ~ /Ki$/) {
+            sub(/Ki$/, "", value)
+            return value / 1024
+        }
+
+        if (value ~ /Mi$/) {
+            sub(/Mi$/, "", value)
+            return value + 0
+        }
+
+        if (value ~ /Gi$/) {
+            sub(/Gi$/, "", value)
+            return value * 1024
+        }
+
+        if (value ~ /Ti$/) {
+            sub(/Ti$/, "", value)
+            return value * 1048576
+        }
+
+        if (value ~ /K$/) {
+            sub(/K$/, "", value)
+            return value * 1000 / 1048576
+        }
+
+        if (value ~ /M$/) {
+            sub(/M$/, "", value)
+            return value * 1000000 / 1048576
+        }
+
+        if (value ~ /G$/) {
+            sub(/G$/, "", value)
+            return value * 1000000000 / 1048576
+        }
+
+        if (value ~ /T$/) {
+            sub(/T$/, "", value)
+            return value * 1000000000000 / 1048576
+        }
+
+        return value / 1048576
+    }
+
+    BEGIN {
+        FS = OFS = "\t"
+
+        while ((getline line < usage_file) > 0) {
+            split(line, fields, "\t")
+
+            key = fields[1] SUBSEP fields[2]
+
+            cpu_usage[key] = cpu_m(fields[3])
+            mem_usage[key] = mem_mi(fields[4])
+        }
+
+        close(usage_file)
+    }
+
+    {
+        key = $1 SUBSEP $2
+
+        cpu_request = $4 + 0
+        cpu_limit   = $5 + 0
+        mem_request = $6 + 0
+        mem_limit   = $7 + 0
+
+        cpu_used = (key in cpu_usage ? cpu_usage[key] : 0)
+        mem_used = (key in mem_usage ? mem_usage[key] : 0)
+
+        cpu_ratio = (cpu_used > 0 ? cpu_request / cpu_used : 0)
+        mem_ratio = (mem_used > 0 ? mem_request / mem_used : 0)
+
+        printf "%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
+               $1,
+               $2,
+               $3,
+               cpu_request,
+               cpu_used,
+               cpu_limit,
+               cpu_ratio,
+               mem_request,
+               mem_used,
+               mem_limit,
+               mem_ratio
+    }
+' |
+{
+    printf '%-18s %-65s %-10s %10s %10s %10s %9s %11s %11s %11s %9s\n' \
+        "NAMESPACE" \
+        "POD" \
+        "STATUS" \
+        "CPU-REQ" \
+        "CPU-USE" \
+        "CPU-LIMIT" \
+        "REQ/USE" \
+        "MEM-REQ" \
+        "MEM-USE" \
+        "MEM-LIMIT" \
+        "REQ/USE"
+
+    sort -t $'\t' -k4,4nr |
+    awk -F'\t' '
+        {
+            cpu_limit = ($6 > 0 ? sprintf("%.0fm", $6) : "-")
+            mem_limit = ($10 > 0 ? sprintf("%.0fMi", $10) : "-")
+
+            cpu_ratio = ($5 > 0 ? sprintf("%.1fx", $7) : "-")
+            mem_ratio = ($9 > 0 ? sprintf("%.1fx", $11) : "-")
+
+            printf "%-18s %-65s %-10s %9.0fm %9.0fm %10s %9s %10.0fMi %10.0fMi %11s %9s\n",
+                   $1,
+                   $2,
+                   $3,
+                   $4,
+                   $5,
+                   cpu_limit,
+                   cpu_ratio,
+                   $8,
+                   $9,
+                   mem_limit,
+                   mem_ratio
+        }
+    '
+}
