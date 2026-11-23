@@ -187,14 +187,14 @@ The tested Alpine image's image loader attempted a nested devpts mount that fail
 
 ## Validation
 
-Local tests use the Python standard library:
+The collection deliberately ships only `web-desktop.sh` and this README. Development tests are maintained separately and are not installed or included in this directory.
 
 ```sh
 bash -n web-desktop.sh
-python3 -m unittest discover -s tests -v
+./web-desktop.sh --help
 ```
 
-Tests cover typed configuration, command-specific flags, unsupported OS rejection, rootless execution/environment, runtime-account isolation and home/reset boundaries. Runtime checks must also exercise initial install, repeated install, stop/start, update, reset on disposable data, authenticated browser rendering and both allowed/denied network sources. Do not run reset against a user's existing home as a test.
+The development tests cover typed configuration, command-specific flags, unsupported OS rejection, rootless execution/environment, runtime-account isolation and home/reset boundaries. Runtime checks must also exercise initial install, repeated install, stop/start, update, reset on disposable data, authenticated browser rendering and both allowed/denied network sources. Do not run reset against a user's existing home as a test.
 
 ### Runtime acceptance (2026-11-22)
 
@@ -233,4 +233,4 @@ These are design references, not scripts executed on the target or copied wholes
 
 ## License
 
-GNU General Public License version 3 (`GPL-3.0-only`). See the repository [LICENSE](../../LICENSE).
+GNU General Public License version 3 (`GPL-3.0-only`). See the repository [LICENSE](../LICENSE).
