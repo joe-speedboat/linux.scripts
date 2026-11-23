@@ -130,7 +130,7 @@ Omit `--skip-firewall-config` if the manager should configure firewall rules. Up
 | `container_name` | `web-desktop` | Container identity; changing an installed identity is rejected. |
 | `bind_address` | Auto-detected, then saved | Specific host IPv4; no all-interface listener. |
 | `port` | `8443` | Host HTTPS port; container HTTPS remains 3001. |
-| `allowed_networks` | RFC1918 ranges | IPv4 source CIDRs for runtime/permanent firewalld rich rules. |
+| `allowed_networks` | RFC1918 ranges | IPv4 source CIDRs for runtime/permanent firewalld rich rules; not enforced by the script when `--skip-firewall-config` is used. |
 | `upstream_image` | `lscr.io/linuxserver/webtop:alpine-xfce` | Must be a compatible Alpine Webtop image; package installation uses apk. |
 | `host_packages` | `podman`, `passt`, `acl` | Host runtime and execute-only ACL tools; required packages. Extras may be added. |
 | `runtime_user` | `webdesktop` | Dedicated, non-login host account for rootless Podman; unrelated existing accounts are rejected. |
@@ -186,8 +186,8 @@ The Webtop image generates a self-signed certificate with OpenSSL when `home/ssl
 1. Validate configuration/address and inspect current ownership/state.
 2. Install requested host packages and build the new image **before** stopping the desktop.
 3. Save a transaction journal and retain the old container under a temporary rollback name.
-4. Create the replacement, apply intended firewall additions and, if it was running, verify HTTPS authentication and the XFCE panel.
-5. Commit the active state, remove stale manager-owned firewall entries, then remove the rollback container.
+4. Create the replacement, apply intended firewall additions **unless `--skip-firewall-config` is used**, and, if it was running, verify HTTPS authentication and the XFCE panel.
+5. Commit the active state, remove stale manager-owned firewall entries **unless skipped**, then remove the rollback container. Skip mode preserves existing rules and their ownership records without querying firewalld.
 6. If activation fails, restore the **original container** and previous running/stopped state. A pending journal is recovered on the next modifying command. Explicit `stop` does not restart the recovered desktop.
 
 A build failure leaves the working container running. If the desktop was stopped, update leaves the replacement stopped; its UI can only be checked when subsequently started. Previously existing unrelated firewall rules are not claimed or removed. Old images and build/state history are retained for investigation; disk capacity must be monitored.
@@ -205,7 +205,7 @@ The rootful and rootless image stores are separate, so migration downloads/build
 - OS allowlist: Rocky Linux 9/10 and AlmaLinux/RHEL 9. Debian/Ubuntu and other releases are rejected before installation. Runtime validation targets Rocky Linux on x86-64; AlmaLinux/RHEL are not separately runtime-tested.
 - Root-run administrative CLI, but rootless container/build execution under a dedicated account. No privileged container, host socket or host networking.
 - User-space pasta forwarding, avoiding the rootful bridge/DNAT path. SELinux stays enforcing; private home labels must match the active container, including after replacement/rollback.
-- Default source rules cover private IPv4 networks. Existing broader host rules are not narrowed; inspect overall firewall policy.
+- When firewall configuration is enabled, default source rules cover private IPv4 networks. With `--skip-firewall-config`, the script does not enforce source restrictions or inspect/change existing rules; access control is the operator's responsibility. Existing broader host rules are never narrowed automatically.
 - Upstream Webtop includes passwordless sudo inside the desktop. This is not a hardened kiosk or multi-tenant boundary.
 - Software rendering by default. No GPU passthrough is configured.
 - Runtime dependencies may update host networking/runtime/SELinux policy packages.
