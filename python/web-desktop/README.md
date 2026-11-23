@@ -205,6 +205,12 @@ Tests cover typed configuration, command-specific flags, unsupported OS rejectio
 - 25 local unit tests and Bash/ShellCheck checks passed. Automated recovery paths are covered locally; an actual SELinux-related failed update and recovery were also exercised on the Rocky10 host.
 - No host reboot was performed in this revision. Linger is enabled for the user manager, but no desktop boot unit is installed and the container has `--restart=no`. Clipboard/file-transfer roundtrips and GPU passthrough are not part of this acceptance.
 
+### Follow-up: normal Chromium launch
+
+The original CDP checks verified the streamed desktop, not the normal GUI browser launch. An administrative Chromium screenshot probe was incorrectly run as container root and left root-owned Chromium, crash-report, dconf and NSS test artifacts in the desktop user's home. Their ownership was corrected without deleting user profiles, and the probe now refuses root execution.
+
+Normal GUI Chromium rendering of a webpage was subsequently verified on Rocky 9. **Normal GUI Chromium operation on Rocky 10 remains an open acceptance item:** correcting the ownership removed the initial crash-database access failure, but the final visual check did not confirm a working browser window. Desktop-stream readiness must not be treated as proof that every desktop application works.
+
 ## Rootless host integration
 
 - The host CLI still requires root for packages, firewall, protected metadata and account setup.
