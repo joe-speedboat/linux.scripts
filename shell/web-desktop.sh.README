@@ -19,7 +19,7 @@ These compatibility investigations do not constitute a guarantee that arbitrary 
 
 ## Quick start
 
-As root on Rocky Linux 9/10 or AlmaLinux/RHEL 9 with active firewalld:
+As root on Rocky Linux 9/10 or AlmaLinux/RHEL 9 (active firewalld is required unless skipped explicitly):
 
 ```sh
 ./web-desktop.sh install --dry-run
@@ -36,10 +36,10 @@ After installation, `web-desktop.sh` is available through `/usr/local/bin/web-de
 
 | Command | Effect | Options besides `-h` / `--help` |
 |---|---|---|
-| `install` | First installation, safe retry of an incomplete install, or reuse/start the existing deployment | `--bind-address HOST_IPV4`, `--dry-run` |
+| `install` | First installation, safe retry of an incomplete install, or reuse/start the existing deployment | `--bind-address HOST_IPV4`, `--dry-run`, `--skip-firewall-config` |
 | `start` | Start the active configuration; recreate the container if absent | None |
 | `stop` | Stop; retain home, credentials, config and images | None |
-| `update` | Apply saved configuration and rebuild from the upstream image; preserve running/stopped state | `--dry-run` |
+| `update` | Apply saved configuration and rebuild from the upstream image; preserve running/stopped state | `--dry-run`, `--skip-firewall-config` |
 | `reset` | Permanently delete the home, recreate and start using the active image/config | `--yes` |
 | `status` | Read-only state, active URL/image, unapplied changes, recovery indication | None |
 | `logs` | Read the host journal filtered by the exact managed container ID | `--tail N` (default 100), `--follow` |
@@ -57,6 +57,19 @@ web-desktop.sh logs --tail 50 --follow
 Exit codes: 0 success, 1 operational error, 2 invalid CLI syntax/options, 3 not installed/ready from status, 130 interrupted operation.
 
 ## Configuration: one source of truth
+
+### Leave firewall configuration entirely to the operator
+
+```sh
+./web-desktop.sh install --skip-firewall-config
+./web-desktop.sh update --skip-firewall-config
+```
+
+With `--skip-firewall-config`, the invocation does not query or require firewalld, add/remove rules, or change firewall services. It leaves every existing rule untouched, including previously manager-owned rules. The flag is not saved in configuration: supply it on each install/update that must leave the firewall alone. Without it, existing automatic firewall behavior remains unchanged.
+
+Previous rule-ownership records are retained, so a later update **without** the flag can manage those rules again. Skipped transactions record the choice for consistent completion/recovery. If an older firewall-managed transaction is still pending, the command refuses before touching it; resolve that transaction separately rather than silently bypassing its rollback requirements.
+
+The operator is responsible for access control and reachability when skipping firewall configuration. `allowed_networks` is not enforced by the application itself. If the chosen port is blocked by external policy, readiness may fail; the manager does not open it automatically in skip mode.
 
 ### Before installation
 
@@ -91,6 +104,23 @@ For example, change just the existing `desktop_packages` value to:
 Do not replace the entire configuration with that fragment. Unknown keys, wrong types, malformed names and invalid values are rejected before activation.
 
 **Editing script defaults does not silently override an installed deployment.** `install` and `start` keep the active configuration; `status` reports unapplied config edits. `update` applies them. Existing host/data paths, container identity and credentials are not automatically migrated by changing defaults.
+
+### Change the bind address after installation
+
+Edit only `bind_address` in the existing `/srv/docker/web-desktop/config.json`, using an IPv4 address actually assigned to the host, for example:
+
+```json
+"bind_address": "192.0.2.10"
+```
+
+Then preview and apply the saved setting. To leave the firewall entirely untouched:
+
+```sh
+web-desktop.sh update --skip-firewall-config --dry-run
+web-desktop.sh update --skip-firewall-config
+```
+
+Omit `--skip-firewall-config` if the manager should configure firewall rules. Updating recreates the container and briefly interrupts a running desktop; home and credentials are retained. Changing the script's `BIND_ADDRESS` default alone does not override a saved installation. Ensure your separately managed firewall permits the new endpoint when skipping configuration.
 
 ### Settings reference
 

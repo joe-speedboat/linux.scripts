@@ -19,7 +19,8 @@
 #
 # Requirements
 #   Root on Rocky Linux 9/10 or AlmaLinux / RHEL 9; Bash, Python 3, iproute and active
-#   firewalld. Registry and package-repository access is needed for install/update.
+#   firewalld unless install/update uses --skip-firewall-config. Registry and
+#   package-repository access is needed for install/update.
 #   The manager uses only Python's standard library; no pip packages are required.
 #   Dedicated runtime user and persistent runtime home/storage under DATA_DIR/runtime.
 #   loginctl linger and user@UID.service support rootless cgroups/session independence.
@@ -44,6 +45,10 @@
 #   logs [--tail N] [--follow]                Display container/application logs.
 #   --help / --version                       General help / manager version.
 #   --yes is valid ONLY for reset. Without it, reset requires typing RESET.
+#   install/update --skip-firewall-config leaves the firewall entirely untouched:
+#   no firewalld queries, rule additions/removals or service changes. This flag
+#   applies only to that invocation; existing rules/ownership records remain.
+#   A pending firewall-managed transaction must be recovered before using it.
 #
 # Configuration and persistence
 #   Edit the defaults/package arrays below BEFORE first installation. Afterwards
@@ -470,6 +475,7 @@ class Commands:
 class Manager:
     def __init__(self, commands=None):
         self.cmd = commands or Commands()
+        self.skip_firewall_config = False
         self.config = None
         self.state = None
 
@@ -603,6 +609,8 @@ class Manager:
                 raise RuntimeError('Address/port occupied: ' + endpoint(cfg)) from error
 
     def rule_plan(self, cfg):
+        if self.skip_firewall_config:
+            return []
         if self.cmd.text('firewall-cmd', '--state') != 'running':
             raise RuntimeError('firewalld must already be active; the manager does not enable services')
         interface = self.interface(cfg)
@@ -702,7 +710,8 @@ class Manager:
         save_json(STATE_FILE, transaction['new_state'])
         self.state = transaction['new_state']
         desired = [self.rule_key(e) for e in transaction['plan']]
-        for entry in transaction['previous'].get('owned_rules', []):
+        previous_rules = [] if transaction.get('skip_firewall_config', False) else transaction['previous'].get('owned_rules', [])
+        for entry in previous_rules:
             if entry not in desired:
                 self.rule_command(entry, '--remove-rich-rule=')
         if self.inspect(transaction['rollback_name']):
@@ -715,6 +724,8 @@ class Manager:
         transaction = json.loads(secure_read(JOURNAL_FILE))
         if transaction.get('manager') != OWNER:
             raise RuntimeError('Unrecognized recovery journal')
+        if self.skip_firewall_config and not transaction.get('skip_firewall_config', False):
+            raise RuntimeError('Pending firewall-managed transaction requires recovery without --skip-firewall-config; firewall untouched')
         if transaction['phase'] == 'committed':
             self.finish_transaction(transaction)
             return
@@ -751,6 +762,7 @@ class Manager:
         plan = self.rule_plan(cfg)
         rollback_name = name + '-rollback-' + secrets.token_hex(4)
         transaction = {'manager': OWNER, 'phase': 'prepared', 'name': name,
+                       'skip_firewall_config': self.skip_firewall_config,
                        'rollback_name': rollback_name, 'old_id': current['Id'] if current else None,
                        'was_running': bool(current and current['State']['Running']), 'previous': previous, 'plan': plan}
         save_json(JOURNAL_FILE, transaction)
@@ -767,6 +779,8 @@ class Manager:
                 self.start_container(name)
                 self.ready(cfg)
             owned = [self.rule_key(e) for e in plan if not e['present'] or self.rule_key(e) in previous.get('owned_rules', [])]
+            if self.skip_firewall_config:
+                owned = copy.deepcopy(previous.get('owned_rules', []))
             new_state = {'schema': 1, 'manager': OWNER, 'phase': 'ready', 'image': image,
                          'base_digest': digest, 'applied': copy.deepcopy(cfg), 'owned_rules': owned,
                          'password_pending': previous.get('password_pending', False)}
@@ -934,7 +948,7 @@ class Manager:
         print('Additional desktop packages: ' + (', '.join(cfg['desktop_packages']) or '(none)'))
         print('Upstream image: ' + cfg['upstream_image'])
         print('Persistent home: ' + str(HOME))
-        print('Firewall sources: ' + ', '.join(cfg['allowed_networks']))
+        print('Firewall: untouched (--skip-firewall-config)' if self.skip_firewall_config else 'Firewall sources: ' + ', '.join(cfg['allowed_networks']))
         print('Glycin compatibility adapter: ' + str(cfg['glycin_compat']))
         print('Credentials: preserve existing or generate once on first install; never shown by dry-run.')
         print('No desktop bootstart; runtime user linger/user manager enabled. Update preserves running/stopped state.')
@@ -955,7 +969,10 @@ Runtime state is separate in {STATE_FILE}; do not edit state.json.
 
 Defaults: username {DEFAULTS["username"]}, HTTPS {DEFAULTS["port"]}; no bootstart.
 Allowed IPv4 sources: {", ".join(DEFAULTS["allowed_networks"])}.
-Root, Bash/Python 3, Rocky 9/10 or AlmaLinux/RHEL 9 and active firewalld are required.
+Root, Bash/Python 3 and Rocky 9/10 or AlmaLinux/RHEL 9 are required.
+Active firewalld is required unless install/update uses --skip-firewall-config.
+With that flag, firewall state and rules are not queried or changed. It is
+invocation-local: existing rules remain; later runs without it manage rules again.
 Podman runs as a dedicated Linux runtime user (separate from HTTP identity).
 Inaccessible root-owned DATA_DIR ancestors receive only a named runtime UID --x
 ACL; already traversable ancestors are unchanged, non-root-owned blockers abort.
@@ -1005,7 +1022,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(prog='web-desktop.sh', description=OVERVIEW,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', action='version', version=VERSION)
-    parser.set_defaults(bind_address=None, dry_run=False, yes=False, follow=False, tail=100)
+    parser.set_defaults(bind_address=None, dry_run=False, yes=False, follow=False, tail=100, skip_firewall_config=False)
     commands = parser.add_subparsers(dest='command', required=True)
     descriptions = {
         'install': '''Install and start, or resume/reuse an existing installation.
@@ -1055,6 +1072,7 @@ Example: web-desktop.sh logs --tail 50''',
         if name == 'install':
             child.add_argument('--bind-address', metavar='HOST_IPV4', help='Optional assigned host IPv4 override on first install')
         if name in ('install', 'update'):
+            child.add_argument('--skip-firewall-config', action='store_true', help='Do not query, require or modify firewalld; leave all existing rules untouched for this invocation')
             child.add_argument('--dry-run', action='store_true', help='Read-only plan; no downloads, writes, password generation or service changes')
         if name == 'reset':
             child.add_argument('--yes', action='store_true', help='RESET ONLY: confirm permanent home deletion without a prompt')
@@ -1073,6 +1091,7 @@ def main():
     check_paths()
     validate_settings(DEFAULTS)
     manager = Manager()
+    manager.skip_firewall_config = getattr(args, 'skip_firewall_config', False)
     loaded = manager.load()
     if args.command in ('status', 'logs') and loaded and manager.state['phase'] == 'ready':
         manager.cmd.runtime = manager.runtime_identity(manager.state['applied'])
