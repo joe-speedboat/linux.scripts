@@ -968,7 +968,7 @@ Credentials: {CREDS_FILE}; home: {HOME}.
 Runtime state is separate in {STATE_FILE}; do not edit state.json.
 
 Defaults: username {DEFAULTS["username"]}, HTTPS {DEFAULTS["port"]}; no bootstart.
-Allowed IPv4 sources: {", ".join(DEFAULTS["allowed_networks"])}.
+Managed firewall sources (unless skipped): {", ".join(DEFAULTS["allowed_networks"])}.
 Root, Bash/Python 3 and Rocky 9/10 or AlmaLinux/RHEL 9 are required.
 Active firewalld is required unless install/update uses --skip-firewall-config.
 With that flag, firewall state and rules are not queried or changed. It is
@@ -1029,13 +1029,16 @@ def parse_args(argv=None):
 No option is required. The initial address is selected from the optional override,
 then the script BIND_ADDRESS default, then a local default-route lookup.
 An existing saved address is preserved. Host packages, image, persistent home,
-root-only credentials and private HTTPS firewall rules are prepared explicitly.
+root-only credentials and, unless skipped, private HTTPS firewall rules are prepared.
+With --skip-firewall-config, firewalld is neither required nor queried; no firewall
+rules or services are changed. Existing rules remain. The flag is invocation-local.
 A random initial password is displayed once after success, never in the log.
 Repeated install reuses the image/password/home. It does not apply edited config;
 use update for that. No automatic bootstart is installed.
 
 Examples: web-desktop.sh install
           web-desktop.sh install --dry-run
+          web-desktop.sh install --skip-firewall-config
           web-desktop.sh install --bind-address 192.0.2.10''',
         'start': '''Start the active deployment, recreate its container if missing.
 Preserves image, password and home. Does not pull/build or apply edited config.
@@ -1051,8 +1054,14 @@ readiness; restore it if activation fails. A recovery journal handles interrupte
 activation on the next modifying command. Old images/config snapshots are retained.
 Image rollback cannot undo application migrations in home files; back up home
 separately before high-impact updates. Host package additions are not rolled back.
-Only manager-owned stale firewall rules are removed; unrelated rules are preserved.
-Example: web-desktop.sh update''',
+Without --skip-firewall-config, only manager-owned stale firewall rules are removed.
+With --skip-firewall-config, firewalld is neither required nor queried; no firewall
+rules or services are changed, including stale rules. Supply the flag on every
+update that must leave the firewall untouched. Access control is then operator-owned.
+Pending firewall-managed transactions must be recovered separately before skipping.
+Examples: web-desktop.sh update
+          web-desktop.sh update --skip-firewall-config
+          web-desktop.sh update --skip-firewall-config --dry-run''',
         'reset': f'''Permanently delete {HOME} and start a fresh desktop.
 Removes browser profiles, downloads, SSH keys, settings and TLS certificate.
 Password, config and installed image are retained. A new certificate is generated.
